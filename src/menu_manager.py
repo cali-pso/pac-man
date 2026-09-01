@@ -1,40 +1,12 @@
 import os
-from enum import Enum, IntEnum, auto
+
 from typing import List, Tuple
 from mlx import Mlx
+from src.utils import Color, Key, GameState
+from src.utils import quit
 
 
-class GameState(Enum):
-    """GameStates"""
 
-    MAIN_MENU = auto()
-    HIGHSCORES = auto()
-    INSTRUCTIONS = auto()
-    PLAYING = auto()
-    PAUSED = auto()
-
-
-class Color(IntEnum):
-    """Colors as 0xRRGGBB"""
-
-    WHITE = 0xFFFFFF
-    YELLOW = 0x00FFFF
-    CYAN = 0xFFFF00
-    GRAY = 0x888888
-
-
-class Key(IntEnum):
-    ESC = 65307
-    ENTER = 65293
-    SPACE = 32
-    UP = 65362
-    DOWN = 65364
-    LEFT = 65361
-    RIGHT = 65363
-    W = 119
-    A = 97
-    S = 115
-    D = 100
 
 
 class MenuManager:
@@ -197,7 +169,8 @@ class MenuManager:
             elif keycode in (Key.ENTER, Key.SPACE):
                 self._execute_menu_action()
             elif keycode == Key.ESC:
-                os._exit(0)
+                quit(self.mlx, self.mlx_ptr)
+                
 
         elif self.state in (
             GameState.HIGHSCORES,
@@ -218,4 +191,4 @@ class MenuManager:
         elif choice == "Instructions":
             self.state = GameState.INSTRUCTIONS
         elif choice == "Exit":
-            os._exit(0)
+            quit(self.mlx, self.mlx_ptr)

@@ -1,0 +1,22 @@
+version = 1
+revision = 3
+requires-python = ">=3.13"
+
+[[package]]
+name = "mlx"
+version = "2.4"
+source = { path = "mlx-2.4-py3-none-any.whl" }
+wheels = [
+    { filename = "mlx-2.4-py3-none-any.whl", hash = "sha256:53f4b2d5588f4cc9a7f6dc7e2549ac4f9a9a1d4312fc6103ffe828feb881ad8f" },
+]
+
+[[package]]
+name = "pac-man"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "mlx" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "mlx", path = "mlx-2.4-py3-none-any.whl" }]
