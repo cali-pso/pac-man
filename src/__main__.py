@@ -1,8 +1,6 @@
-
 from src.app import App
+from src.utils import WIDTH, HEIGHT
 
-WIDTH: int = 800
-HEIGHT: int = 600
 
 def main() -> None:
     app = App(WIDTH, HEIGHT, "Pacman - test MLX")

@@ -1,12 +1,19 @@
 from enum import Enum, IntEnum, auto
 from typing import Any
 
+
+WIDTH: int = 800
+HEIGHT: int = 600
+
+
 class GameState(Enum):
     """GameStates"""
 
+    INTRO = auto()
     MAIN_MENU = auto()
-    HIGHSCORES = auto()
-    INSTRUCTIONS = auto()
+    MENU_HIGHSCORES = auto()
+    MENU_INSTRUCTIONS = auto()
+    MODE_MENU = auto()
     PLAYING = auto()
     PAUSED = auto()
 
@@ -18,6 +25,7 @@ class Color(IntEnum):
     YELLOW = 0x00FFFF
     CYAN = 0xFFFF00
     GRAY = 0x888888
+    GREEN = 0x00AA00
 
 
 class Key(IntEnum):

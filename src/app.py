@@ -2,69 +2,73 @@ from typing import Any
 from mlx import Mlx
 from src.menu_manager import MenuManager
 from src.utils import Color, Key, GameState
-from src.utils import quit
 
 CELL: int = 40
 
 
-
 class App:
-    """Encapsule l'instance MLX et l'etat minimal du test."""
+    """
+    Master class that initializes the Mlx instance and orchestrates the loop
+    """
 
     def __init__(self, width: int, height: int, title: str) -> None:
         self.width = width
         self.height = height
         self.mlx = Mlx()
-        # mlx_init() retourne le pointeur d'instance, requis partout ensuite.
-        self.ptr = self.mlx.mlx_init()
-        self.win = self.mlx.mlx_new_window(self.ptr, self.width, self.height, title)
-        self.menu = MenuManager(self.mlx, self.ptr, self.win)
+        self.mlx_ptr = self.mlx.mlx_init()
+        self.win_ptr = self.mlx.mlx_new_window(
+            self.mlx_ptr, self.width, self.height, title
+        )
+        self.state = GameState.INTRO
+        self.menu = MenuManager(
+            self.mlx, self.mlx_ptr, self.win_ptr, self.state
+        )
 
     # --- Hooks -------------------------------------------------------------
 
-    def on_key(self, keycode: int, menu: MenuManager) -> None:
-        menu.handle_key(keycode)
+    def _key_hook_menu(self, keycode: int, menu: MenuManager) -> None:
+        menu.handle_key(keycode, self.state)
+        self.state = menu.state
 
-    # --- Dessin ------------------------------------------------------------
+    # -----------------------------------------------------------------------
 
-    def draw_grid(self) -> None:
-        """Dessine les lignes de la grille (leger : lignes seulement)."""
+    def _draw_grid(self) -> None:
         for gx in range(0, self.width, CELL):
             for y in range(self.height):
-                self.mlx.mlx_pixel_put(self.ptr, self.win, gx, y, Color.GRAY)
+                self.mlx.mlx_pixel_put(
+                    self.mlx_ptr, self.win_ptr, gx, y, Color.GRAY
+                )
         for gy in range(0, self.height, CELL):
             for x in range(self.width):
-                self.mlx.mlx_pixel_put(self.ptr, self.win, x, gy, Color.GRAY)
-
-    # --- Boucle ------------------------------------------------------------
+                self.mlx.mlx_pixel_put(
+                    self.mlx_ptr, self.win_ptr, x, gy, Color.GRAY
+                )
 
     def run(self) -> None:
-        # Dessin (nice-to-have : ne doit pas empecher de tester Echap)
         try:
-            self.draw_grid()
+            self._draw_grid()
             self.mlx.mlx_string_put(
-                self.ptr, self.win, 16, 24, Color.YELLOW, "ESC pour quitter"
+                self.mlx_ptr,
+                self.win_ptr,
+                16,
+                24,
+                Color.YELLOW,
+                "ESC to quit, any for menu",
             )
         except Exception as exc:
             print("Dessin ignore (a corriger plus tard):", exc)
-        # Certaines versions vulkan ont besoin d'un sync pour afficher.
-        try:
-            self.mlx.mlx_do_sync(self.ptr)
-        except Exception:
-            pass
 
-        
-        self.mlx.mlx_key_hook(self.win, self.on_key, self.menu)
+        self.menu.render()
+        self.mlx.mlx_key_hook(self.win_ptr, self._key_hook_menu, self.menu)
 
-        self.mlx.mlx_loop(self.ptr)
+        self.mlx.mlx_loop(self.mlx_ptr)
 
         # Nettoyage apres sortie de boucle
         try:
-            self.mlx.mlx_destroy_window(self.ptr, self.win)
+            self.mlx.mlx_destroy_window(self.mlx_ptr, self.win_ptr)
         except Exception:
             pass
         try:
-            self.mlx.mlx_release(self.ptr)
+            self.mlx.mlx_release(self.mlx_ptr)
         except Exception:
             pass
-
