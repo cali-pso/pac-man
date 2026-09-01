@@ -1,4 +1,4 @@
-# Récap projet Pacman — modes, scoring, roguelite & son (v3)
+# Récap projet Pacman — modes, scoring, roguelite & son (v4)
 
 **Principe d'archi :** un mode = un `Ruleset` (paramètres + hooks) ; les modes se *fusionnent* en un ruleset actif. **Deux axes** (tactics abandonné) :
 
@@ -21,23 +21,22 @@
 |---|---|---|
 | **Versus** | J1 = Pac-Man ; J2 = un fantôme (lequel **change selon le niveau**), les 3 autres = IA | **J2 (fantôme) gagne quand les vies de Pac-Man = 0** |
 | **Coop** | Même Pac-Man partagé : J1 = haut/bas, J2 = gauche/droite | Simple et chaotique |
-| **Random** | Même Pac-Man partagé, alternance : l'écran indique qui joue, bascule **aléatoire** en cours de niveau | Fréquence de bascule à définir |
+| **Random** | Même Pac-Man partagé, alternance : l'écran indique qui joue, bascule **aléatoire** en cours de niveau | Bascule aléatoire bornée **[3 s, 15 s]** (ajustable en cours de dev) |
 
 ## Scoring
 
-- **Standard (0 flavor)** = Pac-Man du sujet : pacgum **10**, super-pacgum **50**, fantômes **200 → 400 → 800 → 1600**. Timer fonctionnel, **sans bonus de temps**.
-- **Scoring modifié = uniquement quand un flavor mode est actif.** La « lettre » = nombre de flavors actifs.
+- **Standard (aucun mode)** = Pac-Man du sujet : pacgum **10**, super-pacgum **50**, fantômes **200 → 400 → 800 → 1600**. Timer fonctionnel, **sans bonus de temps**.
+- **Modes (≥ 1 flavor actif)** = **un seul barème modifié**, identique quel que soit le nombre de modes actifs (les scores sont affichés séparément au menu → pas besoin de moduler par mode).
 - **Hardcore** = barème séparé (exclusif).
 
-| Barème | Flavors actifs | Pacgum | Super | Fantôme |
+| Barème | Quand | Pacgum | Super | Fantôme |
 |---|---|---|---|---|
-| A (standard) | 0 | 10 | 50 | 200→400→800→1600 |
-| B | 1 | *à définir* | *à définir* | *à définir* |
-| C | 2 | *à définir* | *à définir* | *à définir* |
-| D | 3 | *à définir* | *à définir* | *à définir* |
+| Standard | aucun mode | 10 | 50 | 200→400→800→1600 |
+| Modes | ≥ 1 flavor actif | *à définir* | *à définir* | *à définir* |
 | Hardcore | exclusif | le plus élevé | — | le plus élevé |
 
-*Option : valeurs absolues par palier, OU multiplicateur sur les valeurs réelles (arrondi entier).*
+*Option : valeurs absolues, OU multiplicateur sur les valeurs réelles (arrondi entier).*
+*Les lettres (S, R…) au menu ne servent qu'à **étiqueter** quels modes étaient actifs — elles n'affectent pas le barème.*
 
 **Cumul des multiplicateurs = additif.** Chaque multiplicateur apporte son surplus au-dessus de 1, sommé : `total = 1 + Σ(surplus)`. Ex. roguelite ×2 (+1,0) + mega ×1,5 (+0,5) → **×2,5**. Si le barème est exprimé en multiplicateur, il entre dans la même somme.
 
@@ -63,10 +62,19 @@ Déclenché quand **tous les pacgums** sont mangés.
 
 **Pool & déblocage :**
 - **10 paires** (1 bonus + son malus inverse) = **20 items**.
-- Départ : **3 bonus + 3 malus** débloqués.
+- Départ (avant la 1re partie) : **3 paires** débloquées — **+1/−1 vie**, **+1/−1 bouclier**, **vitesse Pac-Man ↑/↓**.
 - Débloquer un bonus débloque **automatiquement son malus affilié** (items par paires).
 - Déblocage via un **événement sur un niveau aléatoire, 1 max par partie** ; message en début de niveau expliquant le défi (ex. « Chaque fantôme détient un fragment d'artefact, obtenez-les tous… »).
 - **Persistant** entre parties (→ sauvegarde de progression).
+
+### Probabilité bonus/malus du tirage (anti-série)
+
+Les 3 slots sont tirés **en séquence**, chacun bonus ou malus selon une proba qui s'auto-ajuste :
+- 1er slot : **50 % bonus / 50 % malus**.
+- Après chaque slot, décalage de **10 %** : un **bonus** tiré → −10 % de bonus au suivant ; un **malus** tiré → +10 % de bonus au suivant.
+- Ex. 1er = bonus → 2e à **40/60** ; 1er = malus → 2e à **60/40** ; le 3e continue le décalage cumulé.
+- Sur 3 tirages, reste borné dans **[30 %, 70 %]** (pas de clamp nécessaire) ; **remis à 50 %** à chaque nouveau niveau.
+- La proba fixe le **type** de chaque slot ; l'éligibilité choisit ensuite l'**item concret** ; la case cachée est simplement masquée à l'écran (son type est déjà fixé par la chaîne).
 
 ### Règle d'éligibilité (garde-fous unifiés)
 
@@ -117,12 +125,11 @@ Cumul : le ×1,5 s'**ajoute additivement** aux autres multiplicateurs (voir règ
 
 ## Leaderboards au menu principal
 
-Switch entre **3 tableaux** :
+Switch entre **4 tableaux** :
 - **Standard**
 - **Hardcore**
-- **Modes actifs** — chaque score porte une/des **lettre(s) en surbrillance** des modes effectifs (`S` shadow, `R` roguelite…, ex. `SR` pour un cumul).
-
-*Note : dans « modes actifs », des combos différents ont des plafonds différents (B vs D) → les lettres contextualisent le classement.*
+- **Modes actifs** — chaque score porte les **lettres** des modes effectifs (`S` shadow, `R` roguelite…, ex. `SR`). Tous les runs à modes partageant le même barème, ils sont **directement comparables** ; les lettres sont informatives. *(coop/random y figurent avec leur lettre ; versus a sa propre table.)*
+- **Versus** (table dédiée) — colonnes : **nom du gagnant**, **nom du perdant**, **qui a joué quoi** (défini en début de partie), **lettres des modes**.
 
 ## Son
 
@@ -133,9 +140,15 @@ Musique d'ambiance au menu, musiques en niveau, déplacement de Pac-Man, navigat
 
 ## Points encore à trancher
 
-1. **Valeurs des barèmes B/C/D** : absolues ou multiplicateur ? (si multiplicateur → entre dans le cumul additif)
-2. **2 joueurs compte-t-il comme flavor** pour la lettre du barème ? (et scoring du versus)
-3. **Borne du ratio découvert/caché** (min. d'options affichées).
-4. **Fréquence de bascule** du mode random.
-5. **Hardcore** : confirmé exclusif total (tactics abandonné).
-6. **Priorités de dev** : base solide → shadow → hardcore → 2 joueurs → roguelite.
+1. **Valeurs du barème Modes** (unique) et du barème Hardcore : absolues ou multiplicateur ?
+2. **Borne du ratio découvert/caché** (min. d'options affichées).
+
+## Décidé
+
+- **Barème unique pour tous les modes** (affichage séparé au menu) ; lettres = simples étiquettes.
+- **Versus** : table de leaderboard dédiée (gagnant / perdant / rôles / lettres).
+- **Roguelite** : 3 paires de départ (vie, bouclier, vitesse) ; tirage anti-série 50 %±10 % ; règle d'éligibilité ; plancher de 3 garanti.
+- **Random** : bascule aléatoire bornée [3 s, 15 s].
+- **Hardcore** : exclusif (confirmé pour l'instant).
+- **Lib graphique** : `mlx_CLXV` (MLX officielle 42, module Python inclus, même écosystème que le maze package).
+- **Priorités de dev** : loader MazeGenerator → shadow → hardcore → 2 joueurs → roguelite.
