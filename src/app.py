@@ -3,6 +3,7 @@ from mlx import Mlx
 from src.menu_manager import MenuManager
 from src.intro import IntroScene
 from src.audio import AudioManager
+from src.config_parser import ConfigParser
 from src.utils import Color, Key, GameState
 
 CELL: int = 40
@@ -26,6 +27,7 @@ class App:
         self.menu = MenuManager(
             self.mlx, self.mlx_ptr, self.win_ptr, self.state
         )
+
         self.intro = IntroScene(self.mlx, self.mlx_ptr, self.win_ptr)
 
     # --- Transitions -------------------------------------------------------
@@ -37,6 +39,9 @@ class App:
         self.menu.state = GameState.MAIN_MENU
         self.menu.selected_index = 0
         self.menu.render()
+
+        config_parser = ConfigParser()
+        self.rulesets = config_parser.load_config("config.json")
 
     # --- Hooks -------------------------------------------------------------
 
