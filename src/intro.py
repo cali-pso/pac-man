@@ -1,19 +1,15 @@
-"""Cinematique d'intro ASCII : quelques slides d'histoire qui defilent
-automatiquement. N'importe quelle touche saute vers le menu.
-
-A placer dans src/intro.py
+"""Cinematique d'intro ASCII : quelques slides d'histoire qui defilent automatiquement.
+N'importe quelle touche saute vers le menu. A placer dans src/intro.py
 """
 
 from __future__ import annotations
-
 import time
 from typing import Any, List, Tuple
 
 from mlx import Mlx
-from src.utils import WIDTH, HEIGHT
+from src.utils import WIDTH, HEIGHT, center_x_str
 
-# Couleurs correctes au format 0xRRGGBB (independantes de l'enum Color,
-# voir la note sur le bug YELLOW/CYAN).
+# Couleurs correctes au format 0xRRGGBB
 C_YELLOW: int = 0xFFFF00
 C_RED: int = 0xFF0000
 C_PINK: int = 0xFF9CCE
@@ -23,15 +19,10 @@ C_WHITE: int = 0xFFFFFF
 C_GREEN: int = 0x33CC66
 C_GRAY: int = 0x888888
 
-# Largeur approx d'un caractere (font MLX par defaut) pour le centrage.
-CHAR_W: int = 6
 # Duree d'affichage de chaque slide, en secondes.
-SLIDE_SECONDS: float = 10
+SLIDE_SECONDS: float = 4
 
 # Un bloc = (kind, data, color, line_height)
-#   kind "art"  -> data: List[str], une seule couleur, aligne a gauche en bloc
-#   kind "list" -> data: List[(str, color)], aligne a gauche en bloc
-#   kind "text" -> data: List[(str, color)], chaque ligne centree
 Block = Tuple[str, Any, Any, int]
 Slide = List[Block]
 
@@ -112,7 +103,9 @@ def build_slides() -> List[Slide]:
 class IntroScene:
     """Gere l'affichage et l'avancement de la cinematique d'intro."""
 
-    def __init__(self, mlx_inst: Mlx, mlx_ptr: object, win_ptr: object) -> None:
+    def __init__(
+        self, mlx_inst: Mlx, mlx_ptr: object, win_ptr: object
+    ) -> None:
         self.mlx = mlx_inst
         self.mlx_ptr = mlx_ptr
         self.win_ptr = win_ptr
@@ -144,38 +137,42 @@ class IntroScene:
         slide = self.slides[self.index]
 
         y = max(30, (HEIGHT - self._slide_height(slide)) // 2)
+
         for kind, data, color, line_h in slide:
             if kind == "art":
-                width = max(len(s) for s in data)
-                block_x = max(10, WIDTH // 2 - (width * CHAR_W) // 2)
+                # Find the longest line in the ASCII art to center the block uniformly
+                longest_line = max(data, key=len)
+                block_x = max(10, center_x_str(longest_line))
                 for s in data:
                     self._put(block_x, y, color, s)
                     y += line_h
+
             elif kind == "list":
-                width = max(len(s) for s, _c in data)
-                block_x = max(10, WIDTH // 2 - (width * CHAR_W) // 2)
+                # Find the longest list item to center the block uniformly
+                longest_line = max((s for s, _c in data), key=len)
+                block_x = max(10, center_x_str(longest_line))
                 for s, c in data:
                     self._put(block_x, y, c, s)
                     y += line_h
-            else:  # text : chaque ligne centree
+
+            else:  # text : chaque ligne centree individuellement
                 for s, c in data:
-                    x = max(10, WIDTH // 2 - (len(s) * CHAR_W) // 2)
+                    x = max(10, center_x_str(s))
                     self._put(x, y, c, s)
                     y += line_h
+
             y += 10
 
         # Pied de page : indice de progression + hint skip
         progress = f"[{self.index + 1}/{len(self.slides)}]"
-        self._put(20, HEIGHT - 30, C_GRAY, progress)
-        hint = "press any key to skip"
-        hx = WIDTH // 2 - (len(hint) * CHAR_W) // 2
-        self._put(hx, HEIGHT - 30, C_GRAY, hint)
+        self._put(center_x_str(progress), HEIGHT - 55, C_GRAY, progress)
 
+        hint = "press any key to skip"
+        self._put(center_x_str(hint), HEIGHT - 30, C_GRAY, hint)
         self._rendered_index = self.index
 
     def update(self) -> bool:
         """Fait avancer les slides selon le temps ecoule.
-
         Retourne True quand l'intro est terminee.
         """
         if self.finished:

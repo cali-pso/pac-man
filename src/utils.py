@@ -2,8 +2,8 @@ from enum import Enum, IntEnum, auto
 from typing import Any
 
 
-WIDTH: int = 1500
-HEIGHT: int = 1500
+WIDTH: int = 1200
+HEIGHT: int = 1200
 
 
 class GameState(Enum):
@@ -46,3 +46,9 @@ def quit(mlx, mlx_ptr: Any) -> int:
     """Demande a la boucle MLX de s'arreter proprement."""
     mlx.mlx_loop_exit(mlx_ptr)
     return 0
+
+
+def center_x_str(text: str) -> int:
+    """Calculates the X coordinate to horizontally center a string."""
+    char_w = 9 # Standard MLX font width
+    return (WIDTH - (len(text) * char_w)) // 2

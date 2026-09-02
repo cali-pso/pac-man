@@ -1,6 +1,6 @@
 from typing import List, Tuple
 from mlx import Mlx
-from src.utils import Color, Key, GameState, WIDTH, HEIGHT, quit
+from src.utils import Color, Key, GameState, WIDTH, HEIGHT, quit, center_x_str
 
 
 class MenuManager:
@@ -46,70 +46,68 @@ class MenuManager:
             self._draw_game_placeholder()
 
     def _draw_main_menu(self) -> None:
-        # Title
+        title = "=== PAC-MAN ==="
         self.mlx.mlx_string_put(
             self.mlx_ptr,
             self.win_ptr,
-            int(WIDTH / 1.95 - WIDTH / 7.8),
+            center_x_str(title),
             int(HEIGHT / 4),
             int(Color.GREEN),
-            "=== PAC-MAN ===",
+            title,
         )
 
-        # Options
         start_y = int(HEIGHT / 3)
         spacing = 30
         for i, option in enumerate(self.main_options):
             is_selected = i == self.selected_index
             color = Color.YELLOW if is_selected else Color.WHITE
             prefix = "> " if is_selected else "  "
-
+            text = f"{prefix}{option}"
             self.mlx.mlx_string_put(
                 self.mlx_ptr,
                 self.win_ptr,
-                int(WIDTH / 1.95 - WIDTH / 8),
+                center_x_str(text),
                 start_y + (i * spacing),
                 color,
-                f"{prefix}{option}",
+                text,
             )
 
-
     def _draw_mode_menu(self) -> None:
-        # Title
+        title = "=== CHOOSE MODE ==="
         self.mlx.mlx_string_put(
             self.mlx_ptr,
             self.win_ptr,
-            int(WIDTH / 1.95 - WIDTH / 7.8),
+            center_x_str(title),
             int(HEIGHT / 4),
             int(Color.GREEN),
-            "=== CHOOSE MODE ===",
+            title,
         )
 
-        # Options
         start_y = int(HEIGHT / 3)
         spacing = 30
         for i, option in enumerate(self.mode_options):
             is_selected = i == self.selected_index
             color = Color.YELLOW if is_selected else Color.WHITE
             prefix = "> " if is_selected else "  "
-
+            text = f"{prefix}{option}"
             self.mlx.mlx_string_put(
                 self.mlx_ptr,
                 self.win_ptr,
-                int(WIDTH / 1.95 - WIDTH / 8),
+                center_x_str(text),
                 start_y + (i * spacing),
                 color,
-                f"{prefix}{option}",
+                text,
             )
 
     def _draw_highscores(self) -> None:
+        title = "TOP 10 HIGHSCORES"
         self.mlx.mlx_string_put(
             self.mlx_ptr,
             self.win_ptr,
-            150,
-            40,
-            Color.YELLOW,
-            "TOP 10 HIGHSCORES",
+            center_x_str(title),
+            int(HEIGHT / 4),
+            int(Color.YELLOW),
+            title,
         )
 
         mock_scores: List[Tuple[str, int]] = [
@@ -119,76 +117,86 @@ class MenuManager:
             ("goldfish", 20),
         ]
 
-        start_y = 80
+        start_y = int(HEIGHT / 3)
         for i, (name, score) in enumerate(mock_scores, start=1):
+            text = f"{i}. {name:<10} - {score} pts"
             self.mlx.mlx_string_put(
                 self.mlx_ptr,
                 self.win_ptr,
-                120,
+                center_x_str(text),
                 start_y + (i * 22),
-                Color.WHITE,
-                f"{i}. {name:<10} - {score} pts",
+                int(Color.WHITE),
+                text,
             )
 
+        footer = "Press ESC to return to Menu"
         self.mlx.mlx_string_put(
             self.mlx_ptr,
             self.win_ptr,
-            110,
-            260,
-            Color.CYAN,
-            "Press ESC to return to Menu",
+            center_x_str(footer),
+            start_y + 150,
+            int(Color.CYAN),
+            footer,
         )
 
     def _draw_instructions(self) -> None:
+        title = "INSTRUCTIONS"
         self.mlx.mlx_string_put(
             self.mlx_ptr,
             self.win_ptr,
-            160,
-            40,
-            Color.YELLOW,
-            "INSTRUCTIONS",
+            center_x_str(title),
+            int(HEIGHT / 4),
+            int(Color.YELLOW),
+            title,
         )
+
         lines = [
             "- Move: Arrow keys or WASD",
             "- Eat pacgums to win the level",
             "- Avoid ghosts unless powered up",
             "- Press P to pause game",
         ]
+
+        start_y = int(HEIGHT / 3)
         for i, line in enumerate(lines):
             self.mlx.mlx_string_put(
                 self.mlx_ptr,
                 self.win_ptr,
-                60,
-                80 + (i * 25),
-                Color.WHITE,
+                center_x_str(line),
+                start_y + (i * 25),
+                int(Color.WHITE),
                 line,
             )
 
+        footer = "Press ESC to return to Menu"
         self.mlx.mlx_string_put(
             self.mlx_ptr,
             self.win_ptr,
-            110,
-            260,
-            Color.CYAN,
-            "Press ESC to return to Menu",
+            center_x_str(footer),
+            start_y + 150,
+            int(Color.CYAN),
+            footer,
         )
 
     def _draw_game_placeholder(self, mode: str) -> None:
+        title = f"New {mode} game running..."
         self.mlx.mlx_string_put(
             self.mlx_ptr,
             self.win_ptr,
-            120,
-            140,
-            Color.YELLOW,
-            f"New {mode} game running...",
+            center_x_str(title),
+            int(HEIGHT / 2) - 20,
+            int(Color.YELLOW),
+            title,
         )
+
+        footer = "Press ESC to return to main menu"
         self.mlx.mlx_string_put(
             self.mlx_ptr,
             self.win_ptr,
-            90,
-            180,
-            Color.GRAY,
-            "Press ESC to return to main menu",
+            center_x_str(footer),
+            int(HEIGHT / 2) + 20,
+            int(Color.GRAY),
+            footer,
         )
 
     def handle_key(self, keycode: int, state: GameState) -> None:
@@ -248,4 +256,3 @@ class MenuManager:
     def _execute_mode_menu_action(self) -> None:
         choice = self.mode_options[self.selected_index]
         self.state = GameState.PLAYING
-
