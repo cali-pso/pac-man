@@ -52,27 +52,11 @@ class App:
         self.menu.selected_index = 0
         self.menu.render()
 
-    def _ruleset_for(self, mode: Optional[str]) -> RuleSet:
-        table = {
-            "Normal": RuleSet,
-            "Hardcore": HardcoreRuleSet,
-            "Shadow": ShadowRuleSet,
-            "Roguelite": RogueliteRuleSet,
-            "2 Players": TwoPlayerRuleSet,
-        }
-        cls = table.get(mode or "Normal", RuleSet)
-        default = cls()
-        if self.rulesets:
-            for rs in self.rulesets:
-                if type(rs) is type(default):
-                    return rs
-        return default
-
     def _start_game(self, mode: str) -> None:
         self.audio.stop_music()
         self.audio.play_music("level.wav")
         try:
-            ruleset = self._ruleset_for(mode)
+            ruleset = self.rulesets[mode]
             maze = self.maze_loader.load(
                 (ruleset.width, ruleset.height), ruleset.seed
             )
@@ -140,7 +124,7 @@ class App:
         self.menu.handle_key(keycode, self.state)
         self.state = self.menu.state
         if prev != GameState.PLAYING and self.state == GameState.PLAYING:
-            self._start_game(getattr(self.menu, "chosen_mode", None))
+            self._start_game(self.menu.chosen_mode)
         return 0
 
     def _loop_hook(self, *args: Any) -> int:

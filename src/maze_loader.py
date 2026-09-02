@@ -42,15 +42,9 @@ class MazeLoader:
         return Maze(cells, entry, exit_)
 
     def _extract_cells(self, maze_gen: Any) -> List[List[int]]:
-        for attr in ("maze", "grid", "cells"):
-            data = getattr(maze_gen, attr, None)
-            if callable(data):
-                try:
-                    data = data()
-                except Exception:
-                    data = None
-            if data:
-                return [list(row) for row in data]
+        data = maze_gen.maze
+        if data:
+            return [list(row) for row in data]
         raise AttributeError(
             "Grille du maze introuvable (essaye .maze / .grid / .cells)."
         )
