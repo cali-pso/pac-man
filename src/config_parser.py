@@ -1,4 +1,5 @@
 import json
+import re
 from typing import Set
 from models import (
     RuleSet,
@@ -15,7 +16,12 @@ class ConfigParser:
 
     def load_config(self, config_path: str) -> Set[RuleSet]:
         with open(config_path, "r") as f:
-            config_dict = json.load(f)
+            raw_data = f.read()
+
+        raw_data = re.sub(r"/\*.*?\*/", "", raw_data, flags=re.DOTALL)
+        raw_data = re.sub(r"(//|#).*", "", raw_data)
+
+        config_dict = json.loads(raw_data)
         rulesets = list()
         rulesets.append(RuleSet(**config_dict.get("normal_mode", None)))
         rulesets.append(ShadowRuleSet(**config_dict.get("shadow_mode", None)))

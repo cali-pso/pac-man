@@ -3,7 +3,7 @@ from typing import Any
 
 
 WIDTH: int = 1200
-HEIGHT: int = 1200
+HEIGHT: int = 800
 
 
 class GameState(Enum):
