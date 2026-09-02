@@ -2,8 +2,8 @@ from enum import Enum, IntEnum, auto
 from typing import Any
 
 
-WIDTH: int = 1200
-HEIGHT: int = 800
+WIDTH: int = 720
+HEIGHT: int = 480
 
 
 class GameState(Enum):
@@ -50,5 +50,5 @@ def quit(mlx, mlx_ptr: Any) -> int:
 
 def center_x_str(text: str) -> int:
     """Calculates the X coordinate to horizontally center a string."""
-    char_w = 9 # Standard MLX font width
+    char_w = 9  # Standard MLX font width
     return (WIDTH - (len(text) * char_w)) // 2

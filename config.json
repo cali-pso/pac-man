@@ -6,9 +6,9 @@
 	"normal_mode": {
 		"game_mode": "normal",
 		"level": 10,
-		"width": 30,
-		"height": 40,
-		"lives": 3,
+		"width": 20,
+		"height": 15,
+		"lives": 25,
 		"points_per_pacgum": 10,
 		"points_per_super_pacgum": 50,
 		"points_per_ghost": 200,
