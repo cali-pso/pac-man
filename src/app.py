@@ -32,7 +32,7 @@ class App:
 
     def _go_to_menu(self) -> None:
         self.audio.stop_music()
-        self.audio.play_music("menu")
+        self.audio.play_music("menu.wav")
         self.state = GameState.MAIN_MENU
         self.menu.state = GameState.MAIN_MENU
         self.menu.selected_index = 0
@@ -58,7 +58,7 @@ class App:
     # -----------------------------------------------------------------------
 
     def run(self) -> None:
-        self.audio.play_music("intro")
+        self.audio.play_music("intro.wav")
         self.intro.render()
  
         self.mlx.mlx_key_hook(self.win_ptr, self._key_hook, 0)
