@@ -1,11 +1,3 @@
-"""Etat d'une partie : labyrinthe + Pac-Man.
-Le mouvement est declenche par les appuis clavier (un appui = une case).
-En maintenant la touche, la repetition auto du systeme fait avancer
-Pac-Man case par case ; au relachement, il s'arrete.
-
-A placer dans src/game_session.py
-"""
-
 from __future__ import annotations
 
 from typing import Tuple

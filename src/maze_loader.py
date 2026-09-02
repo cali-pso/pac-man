@@ -1,18 +1,8 @@
 from typing import Any, List, Optional, Tuple
-
-_MazeGenerator: Any = None
-try:
-    from mazegenerator import MazeGenerator as _MazeGenerator  # type: ignore
-except Exception:
-    try:
-        import mazegenerator as _mg  # type: ignore
-        _MazeGenerator = getattr(_mg, "MazeGenerator", None)
-    except Exception:
-        _MazeGenerator = None
+from mazegenerator import MazeGenerator
 
 
 class Maze:
-
     WALL_N = 1
     WALL_E = 2
     WALL_S = 4
@@ -35,55 +25,25 @@ class Maze:
 
 
 class MazeLoader:
-
     def __init__(self) -> None:
-        if _MazeGenerator is None:
-            raise ImportError(
-                "Paquet 'mazegenerator' introuvable. Verifie l'install "
-                "(uv add ...whl) et le nom d'import reel du module."
-            )
-        self._Gen = _MazeGenerator
+        pass
 
     def load(
         self,
-        width: int,
-        height: int,
+        size: Tuple[int, int],
         seed: int = 42,
-        perfect: bool = False,
     ) -> Maze:
-        gen = self._build(width, height, seed, perfect)
-        cells = self._extract_cells(gen)
-        entry = self._as_xy(getattr(gen, "maze_entry", None))
-        exit_ = self._as_xy(getattr(gen, "maze_exit", None))
+        maze_gen = MazeGenerator(
+            size=size, perfect=False, seed=seed
+        )
+        cells = self._extract_cells(maze_gen)
+        entry = self._as_xy(maze_gen.maze_entry)
+        exit_ = self._as_xy(maze_gen.maze_exit)
         return Maze(cells, entry, exit_)
 
-    def _build(self, width: int, height: int, seed: int,
-               perfect: bool) -> Any:
-        try:
-            return self._Gen(size=(width, height), perfect=perfect, seed=seed)
-        except TypeError:
-            for kwargs in (
-                {"size": (width, height), "perfect": perfect},
-                {"size": (width, height)},
-            ):
-                try:
-                    g = self._Gen(**kwargs)
-                    if hasattr(g, "generate"):
-                        try:
-                            g.generate(seed=seed)
-                        except TypeError:
-                            try:
-                                g.generate(seed)
-                            except Exception:
-                                pass
-                    return g
-                except TypeError:
-                    continue
-            raise
-
-    def _extract_cells(self, gen: Any) -> List[List[int]]:
+    def _extract_cells(self, maze_gen: Any) -> List[List[int]]:
         for attr in ("maze", "grid", "cells"):
-            data = getattr(gen, attr, None)
+            data = getattr(maze_gen, attr, None)
             if callable(data):
                 try:
                     data = data()
