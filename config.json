@@ -1,0 +1,41 @@
+{
+	"global": {
+		"highscore_filename": "data/highscores.json"
+	},
+	"normal_mode": {
+		"game_mode": "normal",
+		"level": 10,
+		"width": 30,
+		"height": 40,
+		"lives": 3,
+		"points_per_pacgum": 10,
+		"points_per_super_pacgum": 50,
+		"points_per_ghost": 200,
+		"seed": 42,
+		"max_level_time": 90
+	},
+	"shadow_mode": {
+		"game_mode": "shadow",
+		"flashlight_radius": 3,
+		"max_level_time": 120,
+		"points_per_ghost": 400,
+		"flashlight_reduction_time_in_seconds": 10,
+		"flashlight_reduction_step": 1,
+		"flashlight_augmentation_step": 2,
+		"flashlight_augmentation_triggers": ["ghosts", "super_pacgum"]
+	},
+	"hardcore_mode": {
+		"game_mode": "hardcore",
+		"lives": 1,
+		"level": 20,
+		"max_level_time": 60
+	},
+	"roguelite_mode": {
+		"game_mode": "roguelite",
+		"bonus_multiplier": 1
+	},
+	"2_player_mode": {
+		"game_mode": "2_player",
+		"control_switch_time_range": [10, 20]
+	}
+}

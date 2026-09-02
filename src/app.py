@@ -1,6 +1,7 @@
 from typing import Any
 from mlx import Mlx
 from src.menu_manager import MenuManager
+from src.config_parser import ConfigParser
 from src.utils import Color, Key, GameState
 
 CELL: int = 40
@@ -23,6 +24,8 @@ class App:
         self.menu = MenuManager(
             self.mlx, self.mlx_ptr, self.win_ptr, self.state
         )
+        config_parser = ConfigParser()
+        self.rulesets = config_parser.load_config("config.json")
 
     # --- Hooks -------------------------------------------------------------
 
