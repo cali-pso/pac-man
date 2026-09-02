@@ -1,7 +1,7 @@
 """Etat d'une partie : labyrinthe + Pac-Man.
-Deplacement "maintien pour avancer" : Pac-Man avance tant que la touche est
-tenue, s'arrete au relachement. La boucle de jeu applique la direction a
-cadence fixe.
+Le mouvement est declenche par les appuis clavier (un appui = une case).
+En maintenant la touche, la repetition auto du systeme fait avancer
+Pac-Man case par case ; au relachement, il s'arrete.
 
 A placer dans src/game_session.py
 """
@@ -19,7 +19,6 @@ class GameSession:
     def __init__(self, maze: Maze) -> None:
         self.maze = maze
         self.pac_x, self.pac_y = self._find_spawn()
-        self.dir: Tuple[int, int] = (0, 0)  # direction active (0,0 = arret)
 
     def _is_open(self, x: int, y: int) -> bool:
         return (self.maze.cells[y][x] & ALL_WALLS) != ALL_WALLS
@@ -40,15 +39,6 @@ class GameSession:
                             return (x, y)
         return (cx, cy)
 
-    def set_direction(self, dx: int, dy: int) -> None:
-        """Touche enfoncee : Pac-Man part dans cette direction."""
-        self.dir = (dx, dy)
-
-    def release_direction(self, dx: int, dy: int) -> None:
-        """Touche relachee : on arrete si c'est la direction active."""
-        if self.dir == (dx, dy):
-            self.dir = (0, 0)
-
     def _can_move(self, x: int, y: int, dx: int, dy: int) -> bool:
         cell = self.maze.cells[y][x]
         if dx == 1:
@@ -61,13 +51,12 @@ class GameSession:
             return not (cell & Maze.WALL_N)
         return False
 
-    def step(self) -> None:
-        """Avance d'une case si une direction est active et libre."""
-        dx, dy = self.dir
-        if dx == 0 and dy == 0:
-            return
+    def try_move(self, dx: int, dy: int) -> bool:
+        """Tente d'avancer d'une case. Retourne True si Pac-Man a bouge."""
         if not self._can_move(self.pac_x, self.pac_y, dx, dy):
-            return
+            return False
         nx, ny = self.pac_x + dx, self.pac_y + dy
         if 0 <= nx < self.maze.cols and 0 <= ny < self.maze.rows:
             self.pac_x, self.pac_y = nx, ny
+            return True
+        return False

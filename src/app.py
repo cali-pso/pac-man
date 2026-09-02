@@ -1,5 +1,4 @@
-import time
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 from mlx import Mlx
 from src.menu_manager import MenuManager
 from src.intro import IntroScene
@@ -16,13 +15,6 @@ from src.models import (
     TwoPlayerRuleSet,
 )
 from src.utils import GameState, Key
-
-STEP_INTERVAL: float = 0.12  # secondes entre deux deplacements d'une case
-
-# Evenement et masques X11
-EV_KEY_RELEASE: int = 3
-MASK_KEY_PRESS: int = 1
-MASK_KEY_RELEASE: int = 2
 
 
 class App:
@@ -58,7 +50,6 @@ class App:
             print("[config] non chargee, defauts utilises:", exc)
 
         self.session: Optional[GameSession] = None
-        self._last_step: float = 0.0
 
     # --- Transitions -------------------------------------------------------
 
@@ -103,7 +94,6 @@ class App:
             self.session = GameSession(maze)
             self.maze_renderer.prepare(maze)
             self.maze_renderer.render(self.session)
-            self._last_step = time.time()
         except Exception as exc:
             self._draw_error(str(exc))
 
@@ -123,7 +113,7 @@ class App:
     # --- Entrees en jeu ----------------------------------------------------
 
     @staticmethod
-    def _dir_for(keycode: int) -> Optional[tuple]:
+    def _dir_for(keycode: int) -> Optional[Tuple[int, int]]:
         if keycode in (Key.UP, Key.W):
             return (0, -1)
         if keycode in (Key.DOWN, Key.S):
@@ -142,15 +132,10 @@ class App:
             return
         d = self._dir_for(keycode)
         if d is not None:
-            self.session.set_direction(*d)
-
-    def _key_release(self, keycode: int, *args: Any) -> int:
-        if self.state != GameState.PLAYING or self.session is None:
-            return 0
-        d = self._dir_for(keycode)
-        if d is not None:
-            self.session.release_direction(*d)
-        return 0
+            # Un appui = une case. En maintenant, la repetition auto du
+            # systeme fait avancer Pac-Man case par case.
+            if self.session.try_move(*d):
+                self.maze_renderer.render(self.session)
 
     # --- Hooks -------------------------------------------------------------
 
@@ -173,44 +158,17 @@ class App:
         if self.state == GameState.INTRO:
             if self.intro.update():
                 self._go_to_menu()
-        elif self.state == GameState.PLAYING and self.session is not None:
-            now = time.time()
-            if now - self._last_step >= STEP_INTERVAL:
-                self._last_step = now
-                before = (self.session.pac_x, self.session.pac_y)
-                self.session.step()
-                if (self.session.pac_x, self.session.pac_y) != before:
-                    self.maze_renderer.render(self.session)
         return 0
 
     def run(self) -> None:
         self.audio.play_music("intro.wav")
         self.intro.render()
 
-        try:
-            self.mlx.mlx_do_key_autorepeatoff(self.mlx_ptr)
-        except Exception:
-            pass
-
-        # Appui : hook clavier standard.
         self.mlx.mlx_key_hook(self.win_ptr, self._key_hook, 0)
-        # Relachement : KeyRelease (3) avec le BON masque (press|release = 3).
-        try:
-            self.mlx.mlx_hook(
-                self.win_ptr, EV_KEY_RELEASE,
-                MASK_KEY_PRESS | MASK_KEY_RELEASE,
-                self._key_release, 0,
-            )
-        except Exception:
-            pass
         self.mlx.mlx_loop_hook(self.mlx_ptr, self._loop_hook, 0)
 
         self.mlx.mlx_loop(self.mlx_ptr)
 
-        try:
-            self.mlx.mlx_do_key_autorepeaton(self.mlx_ptr)
-        except Exception:
-            pass
         self.audio.stop_music()
         try:
             self.mlx.mlx_destroy_window(self.mlx_ptr, self.win_ptr)
