@@ -1,6 +1,8 @@
 from typing import Any
 from mlx import Mlx
 from src.menu_manager import MenuManager
+from src.intro import IntroScene
+from src.audio import AudioManager
 from src.utils import Color, Key, GameState
 
 CELL: int = 40
@@ -19,51 +21,52 @@ class App:
         self.win_ptr = self.mlx.mlx_new_window(
             self.mlx_ptr, self.width, self.height, title
         )
+        self.audio = AudioManager()
         self.state = GameState.INTRO
         self.menu = MenuManager(
             self.mlx, self.mlx_ptr, self.win_ptr, self.state
         )
+        self.intro = IntroScene(self.mlx, self.mlx_ptr, self.win_ptr)
+
+    # --- Transitions -------------------------------------------------------
+
+    def _go_to_menu(self) -> None:
+        self.audio.stop_music()
+        self.audio.play_music("menu")
+        self.state = GameState.MAIN_MENU
+        self.menu.state = GameState.MAIN_MENU
+        self.menu.selected_index = 0
+        self.menu.render()
 
     # --- Hooks -------------------------------------------------------------
 
-    def _key_hook_menu(self, keycode: int, menu: MenuManager) -> None:
-        menu.handle_key(keycode, self.state)
-        self.state = menu.state
+    def _key_hook(self, keycode: int, param: Any = None) -> int:
+        if self.state == GameState.INTRO:
+            self.intro.skip()
+            self._go_to_menu()
+            return 0
+        self.menu.handle_key(keycode, self.state)
+        self.state = self.menu.state
+        return 0
+ 
+    def _loop_hook(self, *args: Any) -> int:
+        if self.state == GameState.INTRO:
+            if self.intro.update():
+                self._go_to_menu()
+        return 0
 
     # -----------------------------------------------------------------------
 
-    def _draw_grid(self) -> None:
-        for gx in range(0, self.width, CELL):
-            for y in range(self.height):
-                self.mlx.mlx_pixel_put(
-                    self.mlx_ptr, self.win_ptr, gx, y, Color.GRAY
-                )
-        for gy in range(0, self.height, CELL):
-            for x in range(self.width):
-                self.mlx.mlx_pixel_put(
-                    self.mlx_ptr, self.win_ptr, x, gy, Color.GRAY
-                )
-
     def run(self) -> None:
-        try:
-            self._draw_grid()
-            self.mlx.mlx_string_put(
-                self.mlx_ptr,
-                self.win_ptr,
-                16,
-                24,
-                Color.YELLOW,
-                "ESC to quit, any for menu",
-            )
-        except Exception as exc:
-            print("Dessin ignore (a corriger plus tard):", exc)
-
-        self.menu.render()
-        self.mlx.mlx_key_hook(self.win_ptr, self._key_hook_menu, self.menu)
-
+        self.audio.play_music("intro")
+        self.intro.render()
+ 
+        self.mlx.mlx_key_hook(self.win_ptr, self._key_hook, 0)
+        self.mlx.mlx_loop_hook(self.mlx_ptr, self._loop_hook, 0)
+ 
         self.mlx.mlx_loop(self.mlx_ptr)
-
-        # Nettoyage apres sortie de boucle
+ 
+        self.audio.stop_music()
         try:
             self.mlx.mlx_destroy_window(self.mlx_ptr, self.win_ptr)
         except Exception:
