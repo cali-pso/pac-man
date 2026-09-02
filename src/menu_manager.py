@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 from mlx import Mlx
 from src.utils import Color, Key, GameState, WIDTH, HEIGHT, quit
 
@@ -17,6 +17,7 @@ class MenuManager:
 
         self.state: GameState = GameState.MAIN_MENU
         self.selected_index = 0
+        self.chosen_mode: Optional[str] = None
         self.main_options = [
             "Start Game",
             "View Highscores",
@@ -32,6 +33,10 @@ class MenuManager:
         ]
 
     def render(self) -> None:
+        # En PLAYING, c'est App/MazeRenderer qui dessine : on ne touche a rien.
+        if self.state == GameState.PLAYING:
+            return
+
         self.mlx.mlx_clear_window(self.mlx_ptr, self.win_ptr)
 
         if self.state == GameState.MAIN_MENU:
@@ -42,11 +47,8 @@ class MenuManager:
             self._draw_highscores()
         elif self.state == GameState.MENU_INSTRUCTIONS:
             self._draw_instructions()
-        elif self.state == GameState.PLAYING:
-            self._draw_game_placeholder()
 
     def _draw_main_menu(self) -> None:
-        # Title
         self.mlx.mlx_string_put(
             self.mlx_ptr,
             self.win_ptr,
@@ -55,15 +57,12 @@ class MenuManager:
             int(Color.GREEN),
             "=== PAC-MAN ===",
         )
-
-        # Options
         start_y = int(HEIGHT / 3)
         spacing = 30
         for i, option in enumerate(self.main_options):
             is_selected = i == self.selected_index
             color = Color.YELLOW if is_selected else Color.WHITE
             prefix = "> " if is_selected else "  "
-
             self.mlx.mlx_string_put(
                 self.mlx_ptr,
                 self.win_ptr,
@@ -73,9 +72,7 @@ class MenuManager:
                 f"{prefix}{option}",
             )
 
-
     def _draw_mode_menu(self) -> None:
-        # Title
         self.mlx.mlx_string_put(
             self.mlx_ptr,
             self.win_ptr,
@@ -84,15 +81,12 @@ class MenuManager:
             int(Color.GREEN),
             "=== CHOOSE MODE ===",
         )
-
-        # Options
         start_y = int(HEIGHT / 3)
         spacing = 30
         for i, option in enumerate(self.mode_options):
             is_selected = i == self.selected_index
             color = Color.YELLOW if is_selected else Color.WHITE
             prefix = "> " if is_selected else "  "
-
             self.mlx.mlx_string_put(
                 self.mlx_ptr,
                 self.win_ptr,
@@ -104,49 +98,29 @@ class MenuManager:
 
     def _draw_highscores(self) -> None:
         self.mlx.mlx_string_put(
-            self.mlx_ptr,
-            self.win_ptr,
-            150,
-            40,
-            Color.YELLOW,
+            self.mlx_ptr, self.win_ptr, 150, 40, Color.YELLOW,
             "TOP 10 HIGHSCORES",
         )
-
         mock_scores: List[Tuple[str, int]] = [
             ("Sannaka", 1110),
             ("foliole", 20),
             ("Marmelade", 20),
             ("goldfish", 20),
         ]
-
         start_y = 80
         for i, (name, score) in enumerate(mock_scores, start=1):
             self.mlx.mlx_string_put(
-                self.mlx_ptr,
-                self.win_ptr,
-                120,
-                start_y + (i * 22),
-                Color.WHITE,
-                f"{i}. {name:<10} - {score} pts",
+                self.mlx_ptr, self.win_ptr, 120, start_y + (i * 22),
+                Color.WHITE, f"{i}. {name:<10} - {score} pts",
             )
-
         self.mlx.mlx_string_put(
-            self.mlx_ptr,
-            self.win_ptr,
-            110,
-            260,
-            Color.CYAN,
+            self.mlx_ptr, self.win_ptr, 110, 260, Color.CYAN,
             "Press ESC to return to Menu",
         )
 
     def _draw_instructions(self) -> None:
         self.mlx.mlx_string_put(
-            self.mlx_ptr,
-            self.win_ptr,
-            160,
-            40,
-            Color.YELLOW,
-            "INSTRUCTIONS",
+            self.mlx_ptr, self.win_ptr, 160, 40, Color.YELLOW, "INSTRUCTIONS",
         )
         lines = [
             "- Move: Arrow keys or WASD",
@@ -156,44 +130,15 @@ class MenuManager:
         ]
         for i, line in enumerate(lines):
             self.mlx.mlx_string_put(
-                self.mlx_ptr,
-                self.win_ptr,
-                60,
-                80 + (i * 25),
-                Color.WHITE,
-                line,
+                self.mlx_ptr, self.win_ptr, 60, 80 + (i * 25),
+                Color.WHITE, line,
             )
-
         self.mlx.mlx_string_put(
-            self.mlx_ptr,
-            self.win_ptr,
-            110,
-            260,
-            Color.CYAN,
+            self.mlx_ptr, self.win_ptr, 110, 260, Color.CYAN,
             "Press ESC to return to Menu",
         )
 
-    def _draw_game_placeholder(self, mode: str) -> None:
-        self.mlx.mlx_string_put(
-            self.mlx_ptr,
-            self.win_ptr,
-            120,
-            140,
-            Color.YELLOW,
-            f"New {mode} game running...",
-        )
-        self.mlx.mlx_string_put(
-            self.mlx_ptr,
-            self.win_ptr,
-            90,
-            180,
-            Color.GRAY,
-            "Press ESC to return to main menu",
-        )
-
     def handle_key(self, keycode: int, state: GameState) -> None:
-        """Dispatches key events using the Key IntEnum."""
-
         if state == GameState.MAIN_MENU:
             if keycode in (Key.UP, Key.W):
                 self.selected_index = (self.selected_index - 1) % len(
@@ -246,6 +191,5 @@ class MenuManager:
             quit(self.mlx, self.mlx_ptr)
 
     def _execute_mode_menu_action(self) -> None:
-        choice = self.mode_options[self.selected_index]
+        self.chosen_mode = self.mode_options[self.selected_index]
         self.state = GameState.PLAYING
-
