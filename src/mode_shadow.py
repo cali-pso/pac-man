@@ -31,7 +31,7 @@ class ShadowMode:
         return time.time() < self._shine_until
 
     def shine_time_left(self) -> int:
-        if not self.shine_activate():
+        if not self.shine_active():
             return 0
         return max(0, int(self._shine_until - time.time()))
 

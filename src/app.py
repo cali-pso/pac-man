@@ -11,6 +11,7 @@ from src.maze_renderer import MazeRenderer
 from src.game_session import GameSession
 from src.highscore import HighscoreStore
 from src.mode_shadow import ShadowMode
+from src import mode_hardcore
 from src.utils import GameState, Key, center_x_str
 
 GHOST_INTERVAL: float = 0.28  # cadence des fantomes
@@ -83,14 +84,7 @@ class App:
             )
             self._level = 1
             self._total_levels = max(1, int(getattr(ruleset, "level", 10)))
-            self.session = GameSession(
-                maze,
-                ruleset.points_per_pacgum,
-                ruleset.points_per_super_pacgum,
-                ruleset.points_per_ghost,
-                ruleset.lives,
-                ruleset.max_level_time,
-            )
+            self.session = GameSession(maze, **self._session_kwargs(ruleset))
             self.session.level = self._level
             self._attach_mode()
             self._finish_handled = False
@@ -102,6 +96,20 @@ class App:
             self._last_ghost = time.time()
         except Exception as exc:
             print(str(exc))
+
+    def _session_kwargs(self, ruleset) -> dict:
+        """Parametres de GameSession pour le mode courant (presets inclus)."""
+        kw = dict(
+            points_per_pacgum=ruleset.points_per_pacgum,
+            points_per_super_pacgum=ruleset.points_per_super_pacgum,
+            points_per_ghost=ruleset.points_per_ghost,
+            lives=ruleset.lives,
+            max_time=ruleset.max_level_time,
+        )
+        if self._current_mode == "Hardcore":
+            kw = mode_hardcore.apply_to_ruleset_kwargs(kw)
+            kw["no_supers"] = mode_hardcore.NO_SUPER_PACGUMS
+        return kw
 
     def _attach_mode(self) -> None:
         """Cree le controleur du mode choisi et l'attache a la session."""
@@ -117,15 +125,10 @@ class App:
         ruleset = self.rulesets[self._current_mode]
         seed = random.randint(1, 2_000_000_000)  # niveaux 2+ : aleatoire
         maze = self.maze_loader.load((ruleset.width, ruleset.height), seed)
-        self.session = GameSession(
-            maze,
-            ruleset.points_per_pacgum,
-            ruleset.points_per_super_pacgum,
-            ruleset.points_per_ghost,
-            self.session.lives,
-            ruleset.max_level_time,
-            start_score=self.session.score,
-        )
+        kw = self._session_kwargs(ruleset)
+        kw["lives"] = self.session.lives         # on garde les vies
+        kw["start_score"] = self.session.score   # on garde le score
+        self.session = GameSession(maze, **kw)
         self.session.level = self._level
         self._attach_mode()
         self.maze_renderer.prepare(maze)

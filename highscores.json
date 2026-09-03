@@ -35,7 +35,20 @@
       370
     ]
   ],
-  "Shadow": [],
+  "Shadow": [
+    [
+      "seb",
+      3300
+    ],
+    [
+      "seb test",
+      2840
+    ],
+    [
+      "zeubi",
+      2320
+    ]
+  ],
   "Roguelite": [
     [
       "seb test",

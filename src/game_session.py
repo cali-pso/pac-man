@@ -22,13 +22,14 @@ class GameSession:
     def __init__(self, maze: Maze, points_per_pacgum: int = 10,
                  points_per_super_pacgum: int = 50, points_per_ghost: int = 200,
                  lives: int = 3, max_time: int = 90,
-                 start_score: int = 0) -> None:
+                 start_score: int = 0, no_supers: bool = False) -> None:
         self.maze = maze
         self.points_per_pacgum = points_per_pacgum
         self.points_per_super_pacgum = points_per_super_pacgum
         self.points_per_ghost = points_per_ghost
         self.lives = lives
         self.max_time = max_time
+        self.no_supers = no_supers
         self.start_time = time.time()
         self.score = start_score
         self.won = False
@@ -82,6 +83,8 @@ class GameSession:
         return gums
 
     def _seed_supers(self) -> Set[Tuple[int, int]]:
+        if self.no_supers:
+            return set()  # mode hardcore : pas de super-pacgums
         supers: Set[Tuple[int, int]] = set()
         for pos in self._corners():
             supers.add(pos)
