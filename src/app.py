@@ -10,11 +10,13 @@ from src.maze_loader import MazeLoader
 from src.maze_renderer import MazeRenderer
 from src.game_session import GameSession
 from src.highscore import HighscoreStore
+from src.mode_shadow import ShadowMode
 from src.utils import GameState, Key, center_x_str
 
 GHOST_INTERVAL: float = 0.28  # cadence des fantomes
 STEP_INTERVAL: float = 0.11  # cadence de Pac-Man en maintien (sa "vitesse")
 HOLD_GRACE: float = 0.15  # delai sans repetition avant de considerer relache
+STEP_INTERVAL: float = 0.11  # cadence min entre 2 cases (vitesse de Pac-Man)
 BACKSPACE: int = 65288
 
 
@@ -42,6 +44,7 @@ class App:
         )
 
         self.session: Optional[GameSession] = None
+        self.shadow: Optional[ShadowMode] = None
         self._last_ghost: float = 0.0
         self._finish_handled: bool = False
         self._entering_name: bool = False
@@ -49,7 +52,7 @@ class App:
         self._current_mode: str = "Normal"
         self._level: int = 1
         self._total_levels: int = 1
-        # Deplacement Pac-Man (maintien)
+        # Deplacement Pac-Man
         self._move_dir: Tuple[int, int] = (0, 0)
         self._next_dir: Tuple[int, int] = (0, 0)
         self._last_step: float = 0.0
@@ -87,6 +90,7 @@ class App:
                 ruleset.max_level_time,
             )
             self.session.level = self._level
+            self._attach_mode()
             self._finish_handled = False
             self._entering_name = False
             self._name_buffer = ""
@@ -95,6 +99,12 @@ class App:
             self._last_ghost = time.time()
         except Exception as exc:
             print(str(exc))
+
+    def _attach_mode(self) -> None:
+        """Cree le controleur du mode choisi et l'attache a la session."""
+        self.shadow = ShadowMode() if self._current_mode == "Shadow" else None
+        if self.session is not None:
+            self.session.shadow = self.shadow
 
     # --- Progression de niveau --------------------------------------------
 
@@ -113,6 +123,7 @@ class App:
             start_score=self.session.score,
         )
         self.session.level = self._level
+        self._attach_mode()
         self.maze_renderer.prepare(maze)
         self._last_ghost = time.time()
         self._render_game()
@@ -221,10 +232,14 @@ class App:
         if moved:
             if self.session.last_ate:
                 self.audio.play_sound("pacgum.wav")
+                if self.shadow is not None:
+                    self.shadow.on_pacgum()
             elif self.session.last_ate_super:
                 self.audio.play_sound("super_pacgum.wav")
                 self.audio.stop_music()
                 self.audio.play_music("super_active.wav")
+                if self.shadow is not None:
+                    self.shadow.on_shine()
             else:
                 self.audio.play_sound("move.wav")  # deplacement sans manger
             self._progress()
@@ -298,6 +313,8 @@ class App:
             if now - self._last_step >= STEP_INTERVAL:
                 self._last_step = now
                 self._step_pac()
+            if self.shadow is not None:
+                self.shadow.update()
             # Fin du mode POWERED
             if self.session is not None and not self._finished():
                 if self.session.update_power():
