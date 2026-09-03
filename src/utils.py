@@ -2,8 +2,8 @@ from enum import Enum, IntEnum, auto
 from typing import Any
 
 
-WIDTH: int = 720
-HEIGHT: int = 480
+WIDTH: int = 1500
+HEIGHT: int = 1500
 
 
 class GameState(Enum):

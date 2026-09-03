@@ -1,6 +1,7 @@
 from typing import List, Optional, Tuple
 from mlx import Mlx
 from src.utils import Color, Key, GameState, WIDTH, HEIGHT, quit, center_x_str
+from src.highscore import MODES
 
 
 class MenuManager:
@@ -10,10 +11,13 @@ class MenuManager:
         mlx_ptr: object,
         win_ptr: object,
         state: GameState,
+        highscores: object = None,
     ) -> None:
         self.mlx = mlx_inst
         self.mlx_ptr = mlx_ptr
         self.win_ptr = win_ptr
+        self.highscores = highscores
+        self.hs_index = 0
 
         self.state: GameState = GameState.MAIN_MENU
         self.selected_index = 0
@@ -101,49 +105,37 @@ class MenuManager:
             )
 
     def _draw_highscores(self) -> None:
-        title = "TOP 10 HIGHSCORES"
+        mode = MODES[self.hs_index]
+        title = f"HIGHSCORES - {mode}"
         self.mlx.mlx_string_put(
-            self.mlx_ptr,
-            self.win_ptr,
-            center_x_str(title),
-            int(HEIGHT / 4),
-            int(Color.YELLOW),
-            title,
-            self.mlx_ptr,
-            self.win_ptr,
-            150,
-            40,
-            Color.YELLOW,
-            "TOP 10 HIGHSCORES",
+            self.mlx_ptr, self.win_ptr, center_x_str(title),
+            int(HEIGHT / 5), int(Color.YELLOW), title,
         )
-        mock_scores: List[Tuple[str, int]] = [
-            ("Sannaka", 1110),
-            ("foliole", 20),
-            ("Marmelade", 20),
-            ("goldfish", 20),
-        ]
+        switch = "<  Left / Right to switch mode  >"
+        self.mlx.mlx_string_put(
+            self.mlx_ptr, self.win_ptr, center_x_str(switch),
+            int(HEIGHT / 5) + 24, int(Color.GRAY), switch,
+        )
 
+        entries = self.highscores.top(mode) if self.highscores else []
         start_y = int(HEIGHT / 3)
-        start_y = 80
-        for i, (name, score) in enumerate(mock_scores, start=1):
-            text = f"{i}. {name:<10} - {score} pts"
+        if not entries:
+            empty = "No scores yet - be the first!"
             self.mlx.mlx_string_put(
-                self.mlx_ptr,
-                self.win_ptr,
-                center_x_str(text),
-                start_y + (i * 22),
-                int(Color.WHITE),
-                text,
+                self.mlx_ptr, self.win_ptr, center_x_str(empty),
+                start_y, int(Color.WHITE), empty,
+            )
+        for i, (name, score) in enumerate(entries, start=1):
+            text = f"{i:>2}. {name:<10} - {score} pts"
+            self.mlx.mlx_string_put(
+                self.mlx_ptr, self.win_ptr, center_x_str(text),
+                start_y + (i * 22), int(Color.WHITE), text,
             )
 
         footer = "Press ESC to return to Menu"
         self.mlx.mlx_string_put(
-            self.mlx_ptr,
-            self.win_ptr,
-            center_x_str(footer),
-            start_y + 150,
-            int(Color.CYAN),
-            footer,
+            self.mlx_ptr, self.win_ptr, center_x_str(footer),
+            start_y + 12 * 22 + 20, int(Color.CYAN), footer,
         )
 
     def _draw_instructions(self) -> None:
@@ -235,8 +227,15 @@ class MenuManager:
             elif keycode == Key.ESC:
                 self.state = GameState.MAIN_MENU
 
+        elif state == GameState.MENU_HIGHSCORES:
+            if keycode in (Key.LEFT, Key.A):
+                self.hs_index = (self.hs_index - 1) % len(MODES)
+            elif keycode in (Key.RIGHT, Key.D):
+                self.hs_index = (self.hs_index + 1) % len(MODES)
+            elif keycode == Key.ESC:
+                self.state = GameState.MAIN_MENU
+
         elif state in (
-            GameState.MENU_HIGHSCORES,
             GameState.MENU_INSTRUCTIONS,
             GameState.PLAYING,
         ):
@@ -253,6 +252,7 @@ class MenuManager:
             self.selected_index = 0
         elif choice == "View Highscores":
             self.state = GameState.MENU_HIGHSCORES
+            self.hs_index = 0
         elif choice == "Instructions":
             self.state = GameState.MENU_INSTRUCTIONS
         elif choice == "Exit":

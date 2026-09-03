@@ -1,15 +1,20 @@
 import struct
 from typing import Optional
 
+from src.entities import EntityState
 from src.game_session import GameSession
 from src.maze_loader import Maze
 
 WALL_COLOR: int = 0x5555FF
-ENTRY_COLOR: int = 0xFFAA00
 PAC_COLOR: int = 0xFFFF00
+GUM_COLOR: int = 0xF0C0A0
+SUPER_COLOR: int = 0xFFFFFF
+FRIGHT_COLOR: int = 0x2222EE  # fantome comestible
 BG_COLOR: int = 0x000000
-MARGIN: int = 40
+HUD_COLOR: int = 0xFFFFFF
+MARGIN: int = 30
 THICK: int = 2
+TOP_PAD: int = 34  # bande du haut reservee au HUD
 
 
 class MazeRenderer:
@@ -34,12 +39,14 @@ class MazeRenderer:
         self.cell = 0
         self.iw = 0
         self.ih = 0
-        self.ox = 0
-        self.oy = 0
+        self.mox = 0  # origine du labyrinthe dans l'image
+        self.moy = 0
         self.size_line = 0
         self.bpp_bytes = 4
         self.endian = 0
         self._pac_b = b""
+        self._gum_b = b""
+        self._super_b = b""
 
     def _flush(self) -> None:
         try:
@@ -52,7 +59,6 @@ class MazeRenderer:
         fmt = "<I" if endian == 0 else ">I"
         return struct.pack(fmt, 0xFF000000 | (color & 0xFFFFFF))
 
-
     def prepare(self, maze: Maze) -> None:
         self._ready = False
         self.mlx.mlx_clear_window(self.mlx_ptr, self.win_ptr)
@@ -60,13 +66,16 @@ class MazeRenderer:
         if cols == 0 or rows == 0:
             return
 
+        # Image plein ecran : HUD + labyrinthe + entites, tout rafraichi.
+        iw = self.screen_w
+        ih = self.screen_h
         avail_w = self.screen_w - 2 * MARGIN
-        avail_h = self.screen_h - 2 * MARGIN
+        avail_h = self.screen_h - 2 * MARGIN - TOP_PAD
         cell = max(6, min(avail_w // cols, avail_h // rows))
-        iw = cell * cols + THICK + 1
-        ih = cell * rows + THICK + 1
-        ox = (self.screen_w - cell * cols) // 2
-        oy = (self.screen_h - cell * rows) // 2
+        maze_w = cell * cols
+        maze_h = cell * rows
+        mox = (self.screen_w - maze_w) // 2
+        moy = TOP_PAD + ((self.screen_h - TOP_PAD) - maze_h) // 2
 
         if self._img is not None:
             try:
@@ -79,9 +88,7 @@ class MazeRenderer:
         bpp_bytes = bpp // 8
 
         wall_b = self._pack(WALL_COLOR, endian)
-        entry_b = self._pack(ENTRY_COLOR, endian)
         bg_b = self._pack(BG_COLOR, endian)
-
         buf = bytearray(bg_b * (size_line * ih // bpp_bytes))
 
         def hline(x0: int, x1: int, y: int) -> None:
@@ -114,8 +121,8 @@ class MazeRenderer:
         for y in range(rows):
             for x in range(cols):
                 v = maze.cells[y][x]
-                px = x * cell
-                py = y * cell
+                px = mox + x * cell
+                py = moy + y * cell
                 if v & Maze.WALL_N:
                     hband(px, px + cell, py)
                 if v & Maze.WALL_W:
@@ -131,26 +138,20 @@ class MazeRenderer:
         self.cell = cell
         self.iw = iw
         self.ih = ih
-        self.ox = ox
-        self.oy = oy
+        self.mox = mox
+        self.moy = moy
         self.size_line = size_line
         self.bpp_bytes = bpp_bytes
         self.endian = endian
         self._pac_b = self._pack(PAC_COLOR, endian)
+        self._gum_b = self._pack(GUM_COLOR, endian)
+        self._super_b = self._pack(SUPER_COLOR, endian)
         self._ready = True
 
-    def render(self, session: GameSession) -> None:
-        if not self._ready or self._template is None or self._mvb is None:
-            return
-        work = bytearray(self._template)
-
-        cell = self.cell
-        cx = session.pac_x * cell + cell // 2
-        cy = session.pac_y * cell + cell // 2
-        r = max(3, cell // 2 - 2)
+    def _fill_dot(self, work: bytearray, cx: int, cy: int, r: int,
+                  color: bytes) -> None:
         sl = self.size_line
         bb = self.bpp_bytes
-        pac = self._pac_b
         for dy in range(-r, r + 1):
             yy = cy + dy
             if yy < 0 or yy >= self.ih:
@@ -161,11 +162,56 @@ class MazeRenderer:
             if x1 < x0:
                 continue
             base = yy * sl + x0 * bb
-            work[base:base + (x1 - x0 + 1) * bb] = pac * (x1 - x0 + 1)
+            work[base:base + (x1 - x0 + 1) * bb] = color * (x1 - x0 + 1)
+
+    def render(self, session: GameSession) -> None:
+        if not self._ready or self._template is None or self._mvb is None:
+            return
+        work = bytearray(self._template)
+        cell = self.cell
+        half = cell // 2
+        mox, moy = self.mox, self.moy
+
+        # Pacgums
+        gum_r = max(1, cell // 8)
+        for (gx, gy) in session.pacgums:
+            self._fill_dot(work, mox + gx * cell + half,
+                           moy + gy * cell + half, gum_r, self._gum_b)
+
+        # Super-pacgums (plus gros)
+        super_r = max(2, cell // 3)
+        for (gx, gy) in session.super_pacgums:
+            self._fill_dot(work, mox + gx * cell + half,
+                           moy + gy * cell + half, super_r, self._super_b)
+
+        # Pac-Man
+        self._fill_dot(work, mox + session.pacman.x * cell + half,
+                       moy + session.pacman.y * cell + half,
+                       max(3, half - 2), self._pac_b)
+
+        # Fantomes
+        for g in getattr(session, "ghosts", []):
+            if g.state == EntityState.DEAD:
+                continue  # fantome mange : invisible pendant sa reapparition
+            col = FRIGHT_COLOR if g.state == EntityState.POWERED else g.color
+            gcol = self._pack(col, self.endian)
+            self._fill_dot(work, mox + g.x * cell + half,
+                           moy + g.y * cell + half, max(3, half - 3), gcol)
 
         n = min(len(self._mvb), len(work))
         self._mvb[:n] = work[:n]
         self.mlx.mlx_put_image_to_window(
-            self.mlx_ptr, self.win_ptr, self._img, self.ox, self.oy
+            self.mlx_ptr, self.win_ptr, self._img, 0, 0
+        )
+        # HUD dans la bande du haut (au-dessus du labyrinthe, rafraichi)
+        hud = (f"Level: {getattr(session, 'level', 1)}   "
+               f"Score: {session.score}   Lives: {session.lives}   "
+               f"Gums: {len(session.pacgums)}   "
+               f"Super: {len(session.super_pacgums)}   "
+               f"Time: {session.time_left()}")
+        if session.powered:
+            hud += f"   Power: {session.power_time_left()}"
+        self.mlx.mlx_string_put(
+            self.mlx_ptr, self.win_ptr, self.mox, 18, HUD_COLOR, hud
         )
         self._flush()
