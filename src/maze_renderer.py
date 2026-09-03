@@ -132,9 +132,14 @@ class MazeRenderer:
                 if y == rows - 1 and (v & Maze.WALL_S):
                     hband(px, px + cell, py + cell)
 
+        # buf contient fond noir + murs (statique). On garde aussi une
+        # version fond-noir-seul pour le mode shadow (murs dynamiques).
         self._img = img
         self._mvb = data.cast("B")
-        self._template = buf
+        self._maze = maze
+        self._bg_b = bg_b
+        self._wall_b = wall_b
+        self._template = buf                 # fond + murs (mode normal)
         self.cell = cell
         self.iw = iw
         self.ih = ih
@@ -164,35 +169,99 @@ class MazeRenderer:
             base = yy * sl + x0 * bb
             work[base:base + (x1 - x0 + 1) * bb] = color * (x1 - x0 + 1)
 
+    def _draw_walls(self, work: bytearray, visible) -> None:
+        """Dessine les murs dans work. visible(x, y) filtre par cellule
+        (None-safe : si visible est None, tout est dessine)."""
+        maze = self._maze
+        cell = self.cell
+        mox, moy = self.mox, self.moy
+        sl = self.size_line
+        bb = self.bpp_bytes
+        wb = self._wall_b
+        iw, ih = self.iw, self.ih
+
+        def hband(x0, x1, y):
+            x0 = max(0, x0); x1 = min(iw, x1)
+            for t in range(THICK):
+                yy = y + t
+                if 0 <= yy < ih and x1 > x0:
+                    base = yy * sl + x0 * bb
+                    work[base:base + (x1 - x0) * bb] = wb * (x1 - x0)
+
+        def vband(x, y0, y1):
+            y0 = max(0, y0); y1 = min(ih, y1)
+            for t in range(THICK):
+                xx = x + t
+                if 0 <= xx < iw:
+                    for yy in range(y0, y1):
+                        off = yy * sl + xx * bb
+                        work[off:off + bb] = wb
+
+        for y in range(maze.rows):
+            for x in range(maze.cols):
+                if visible is not None and not visible(x, y):
+                    continue
+                v = maze.cells[y][x]
+                px = mox + x * cell
+                py = moy + y * cell
+                if v & Maze.WALL_N:
+                    hband(px, px + cell, py)
+                if v & Maze.WALL_W:
+                    vband(px, py, py + cell)
+                if x == maze.cols - 1 and (v & Maze.WALL_E):
+                    vband(px + cell, py, py + cell)
+                if y == maze.rows - 1 and (v & Maze.WALL_S):
+                    hband(px, px + cell, py + cell)
+
     def render(self, session: GameSession) -> None:
-        if not self._ready or self._template is None or self._mvb is None:
+        if not self._ready or self._mvb is None:
             return
-        work = bytearray(self._template)
         cell = self.cell
         half = cell // 2
         mox, moy = self.mox, self.moy
 
+        # Mode shadow : ne revele que ce qui est dans la zone lumineuse.
+        shadow = getattr(session, "shadow", None)
+        px, py = session.pacman.x, session.pacman.y
+
+        def visible(ex: int, ey: int) -> bool:
+            return shadow is None or shadow.is_visible(ex, ey, px, py)
+
+        if shadow is None:
+            # Mode normal : murs deja graves dans le template (rapide).
+            work = bytearray(self._template)
+        else:
+            # Mode shadow : fond noir + murs dessines selon la zone lumineuse.
+            work = bytearray(
+                self._bg_b * (self.size_line * self.ih // self.bpp_bytes)
+            )
+            self._draw_walls(work, visible)
+
         # Pacgums
         gum_r = max(1, cell // 8)
         for (gx, gy) in session.pacgums:
-            self._fill_dot(work, mox + gx * cell + half,
-                           moy + gy * cell + half, gum_r, self._gum_b)
+            if visible(gx, gy):
+                self._fill_dot(work, mox + gx * cell + half,
+                               moy + gy * cell + half, gum_r, self._gum_b)
 
         # Super-pacgums (plus gros)
         super_r = max(2, cell // 3)
         for (gx, gy) in session.super_pacgums:
-            self._fill_dot(work, mox + gx * cell + half,
-                           moy + gy * cell + half, super_r, self._super_b)
+            if visible(gx, gy):
+                self._fill_dot(work, mox + gx * cell + half,
+                               moy + gy * cell + half, super_r, self._super_b)
 
-        # Pac-Man
-        self._fill_dot(work, mox + session.pacman.x * cell + half,
-                       moy + session.pacman.y * cell + half,
+        # Pac-Man (toujours visible)
+        self._fill_dot(work, mox + px * cell + half,
+                       moy + py * cell + half,
                        max(3, half - 2), self._pac_b)
 
         # Fantomes
         for g in getattr(session, "ghosts", []):
             if g.state == EntityState.DEAD:
-                continue  # fantome mange : invisible pendant sa reapparition
+                continue
+            if not visible(g.x, g.y):
+                continue
             col = FRIGHT_COLOR if g.state == EntityState.POWERED else g.color
             gcol = self._pack(col, self.endian)
             self._fill_dot(work, mox + g.x * cell + half,
@@ -211,6 +280,10 @@ class MazeRenderer:
                f"Time: {session.time_left()}")
         if session.powered:
             hud += f"   Power: {session.power_time_left()}"
+        if shadow is not None:
+            hud += f"   Light: {shadow.radius:.1f}"
+            if shadow.shine_active():
+                hud += f"   SHINE: {shadow.shine_time_left()}"
         self.mlx.mlx_string_put(
             self.mlx_ptr, self.win_ptr, self.mox, 18, HUD_COLOR, hud
         )

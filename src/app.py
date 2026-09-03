@@ -10,11 +10,11 @@ from src.maze_loader import MazeLoader
 from src.maze_renderer import MazeRenderer
 from src.game_session import GameSession
 from src.highscore import HighscoreStore
+from src.mode_shadow import ShadowMode
 from src.utils import GameState, Key, center_x_str
 
-GHOST_INTERVAL: float = 0.28   # cadence des fantomes
-STEP_INTERVAL: float = 0.11    # cadence de Pac-Man en maintien (sa "vitesse")
-HOLD_GRACE: float = 0.15       # delai sans repetition avant de considerer relache
+GHOST_INTERVAL: float = 0.28  # cadence des fantomes
+STEP_INTERVAL: float = 0.11   # cadence min entre 2 cases (vitesse de Pac-Man)
 BACKSPACE: int = 65288
 
 
@@ -42,6 +42,7 @@ class App:
         )
 
         self.session: Optional[GameSession] = None
+        self.shadow: Optional[ShadowMode] = None
         self._last_ghost: float = 0.0
         self._finish_handled: bool = False
         self._entering_name: bool = False
@@ -49,18 +50,14 @@ class App:
         self._current_mode: str = "Normal"
         self._level: int = 1
         self._total_levels: int = 1
-        # Deplacement Pac-Man (maintien)
+        # Deplacement Pac-Man
         self._move_dir: Tuple[int, int] = (0, 0)
-        self._repeating: bool = False
-        self._move_until: float = 0.0
         self._last_step: float = 0.0
 
     # --- Transitions -------------------------------------------------------
 
     def _reset_move(self) -> None:
         self._move_dir = (0, 0)
-        self._repeating = False
-        self._move_until = 0.0
         self._last_step = 0.0
 
     def _go_to_menu(self) -> None:
@@ -95,6 +92,7 @@ class App:
                 ruleset.max_level_time,
             )
             self.session.level = self._level
+            self._attach_mode()
             self._finish_handled = False
             self._entering_name = False
             self._name_buffer = ""
@@ -104,6 +102,13 @@ class App:
             self._last_ghost = time.time()
         except Exception as exc:
             print(str(exc))
+
+    def _attach_mode(self) -> None:
+        """Cree le controleur du mode choisi et l'attache a la session."""
+        self.shadow = (ShadowMode()
+                       if self._current_mode == "Shadow" else None)
+        if self.session is not None:
+            self.session.shadow = self.shadow
 
     # --- Progression de niveau --------------------------------------------
 
@@ -122,6 +127,7 @@ class App:
             start_score=self.session.score,
         )
         self.session.level = self._level
+        self._attach_mode()
         self.maze_renderer.prepare(maze)
         self._last_ghost = time.time()
         self._render_game()
@@ -218,10 +224,14 @@ class App:
         if self.session.try_move(dx, dy):
             if self.session.last_ate:
                 self.audio.play_sound("pacgum.wav")
+                if self.shadow is not None:
+                    self.shadow.on_pacgum()
             elif self.session.last_ate_super:
                 self.audio.play_sound("super_pacgum.wav")
                 self.audio.stop_music()
                 self.audio.play_music("super_active.wav")
+                if self.shadow is not None:
+                    self.shadow.on_shine()
             else:
                 self.audio.play_sound("move.wav")  # deplacement sans manger
             self._progress()
@@ -263,16 +273,12 @@ class App:
         if d is None:
             return
         now = time.time()
-        if d != self._move_dir:
-            # Nouvelle direction (tap ou changement) : un pas immediat.
+        # Changement de direction -> on bouge tout de suite ; sinon on plafonne
+        # la cadence a STEP_INTERVAL (ignore les repetitions trop rapprochees).
+        if d != self._move_dir or (now - self._last_step) >= STEP_INTERVAL:
             self._move_dir = d
-            self._repeating = False
             self._last_step = now
             self._step_pac()
-        else:
-            # Meme direction re-pressee = auto-repeat -> maintien.
-            self._repeating = True
-            self._move_until = now + HOLD_GRACE
 
     # --- Hooks -------------------------------------------------------------
 
@@ -299,14 +305,8 @@ class App:
         if (self.state == GameState.PLAYING and self.session is not None
                 and not self._finished()):
             now = time.time()
-            # Pac-Man en maintien : avance a SA cadence tant que ca repete
-            if self._repeating and self._move_dir != (0, 0):
-                if now >= self._move_until:
-                    self._repeating = False
-                    self._move_dir = (0, 0)
-                elif now - self._last_step >= STEP_INTERVAL:
-                    self._last_step = now
-                    self._step_pac()
+            if self.shadow is not None:
+                self.shadow.update()
             # Fin du mode POWERED
             if self.session is not None and not self._finished():
                 if self.session.update_power():
