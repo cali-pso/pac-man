@@ -30,6 +30,7 @@ class Entity(ABC):
         self.spawn_y = start_y
         self.dir_x, self.dir_y = 0, 0
         self.next_dir_x, self.next_dir_y = 0, 0
+        self.prev_x, self.prev_y = start_x, start_y
         self.color = color
         self.playable = playable
         self.can_move = True
@@ -39,6 +40,7 @@ class Entity(ABC):
     def reset_position(self) -> None:
         self.x = self.spawn_x
         self.y = self.spawn_y
+        self.prev_x, self.prev_y = self.spawn_x, self.spawn_y
         self.dir_x, self.dir_y = 0, 0
         self.next_dir_x, self.next_dir_y = 0, 0
 
@@ -70,6 +72,7 @@ class PacMan(Entity):
             return False
         if not self.can_step(cells, self.x, self.y, dx, dy, rows, cols):
             return False
+        self.prev_x, self.prev_y = self.x, self.y
         self.dir_x, self.dir_y = dx, dy
         self.x += dx
         self.y += dy
@@ -116,6 +119,7 @@ class Ghost(Entity):
         else:
             choice = random.choice(free)
 
+        self.prev_x, self.prev_y = self.x, self.y
         self.dir_x, self.dir_y = choice
         self.x += choice[0]
         self.y += choice[1]

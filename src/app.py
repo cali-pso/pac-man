@@ -166,7 +166,12 @@ class App:
         if self.session.won or self.session.game_over:
             self._render_finish()
             return
-        self.maze_renderer.render(self.session)
+
+        now = time.time()
+        pac_prog = max(0.0, min(1.0, (now - self._last_step) / STEP_INTERVAL))
+        ghost_prog = max(0.0, min(1.0, (now - self._last_ghost) / GHOST_INTERVAL))
+        
+        self.maze_renderer.render(self.session, pac_prog, ghost_prog)
 
     def _render_finish(self) -> None:
         self.mlx.mlx_clear_window(self.mlx_ptr, self.win_ptr)
@@ -218,6 +223,8 @@ class App:
     def _step_pac(self) -> None:
         if self.session is None or self._finished():
             return
+        self.session.pacman.prev_x = self.session.pacman.x
+        self.session.pacman.prev_y = self.session.pacman.y
         next_dir = self._next_dir
         moved = False
         if next_dir != (0, 0) and self.session.try_move(

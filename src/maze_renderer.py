@@ -1,3 +1,4 @@
+import time
 import struct
 from typing import Optional
 
@@ -47,6 +48,35 @@ class MazeRenderer:
         self._pac_b = b""
         self._gum_b = b""
         self._super_b = b""
+        self._load_sprites()
+
+    def _load_sprites(self) -> None:
+        self.sprites = {"pacman": {}, "ghosts": {}}
+        dirs = ["up", "down", "left", "right"]
+
+        ghost_files = {
+            0xFF0000: "blinky",
+            0xFFB8FF: "pinky",
+            0x00FFFF: "inky",
+            0xFFB852: "clyde",
+        }
+        self.ghost_mapping = ghost_files
+        for d in dirs:
+            self.sprites["pacman"][d] = []
+            for i in range(1, 4):
+                path = f"src/assets/pacman-art/pacman-{d}/{i}.png"
+                img = self.mlx.mlx_png_file_to_image(self.mlx_ptr, path)
+                self.sprites["pacman"][d].append({"ptr": img[0], "w": img[1], "h": img[2]})
+                
+        # Same structural approach for ghosts:
+        for name in ghost_files.values():
+            path = f"src/assets/pacman-art/ghosts/{name}.png"
+            img = self.mlx.mlx_png_file_to_image(self.mlx_ptr, path)
+            self.sprites["ghosts"][name] = {"ptr": img[0], "w": img[1], "h": img[2]}
+        path_blue = "src/assets/pacman-art/ghosts/blue_ghost.png"
+        self.sprites["ghosts"]["powered"] = self.mlx.mlx_png_file_to_image(
+            self.mlx_ptr, path_blue
+        )
 
     def _flush(self) -> None:
         try:
@@ -99,7 +129,7 @@ class MazeRenderer:
             if x1 <= x0:
                 return
             base = y * size_line + x0 * bpp_bytes
-            buf[base:base + (x1 - x0) * bpp_bytes] = wall_b * (x1 - x0)
+            buf[base : base + (x1 - x0) * bpp_bytes] = wall_b * (x1 - x0)
 
         def vline(x: int, y0: int, y1: int) -> None:
             if x < 0 or x >= iw:
@@ -108,7 +138,7 @@ class MazeRenderer:
             y1 = min(ih, y1)
             for yy in range(y0, y1):
                 off = yy * size_line + x * bpp_bytes
-                buf[off:off + bpp_bytes] = wall_b
+                buf[off : off + bpp_bytes] = wall_b
 
         def hband(x0: int, x1: int, y: int) -> None:
             for t in range(THICK):
@@ -139,7 +169,7 @@ class MazeRenderer:
         self._maze = maze
         self._bg_b = bg_b
         self._wall_b = wall_b
-        self._template = buf                 # fond + murs (mode normal)
+        self._template = buf  # fond + murs (mode normal)
         self.cell = cell
         self.iw = iw
         self.ih = ih
@@ -153,8 +183,9 @@ class MazeRenderer:
         self._super_b = self._pack(SUPER_COLOR, endian)
         self._ready = True
 
-    def _fill_dot(self, work: bytearray, cx: int, cy: int, r: int,
-                  color: bytes) -> None:
+    def _fill_dot(
+        self, work: bytearray, cx: int, cy: int, r: int, color: bytes
+    ) -> None:
         sl = self.size_line
         bb = self.bpp_bytes
         for dy in range(-r, r + 1):
@@ -167,7 +198,7 @@ class MazeRenderer:
             if x1 < x0:
                 continue
             base = yy * sl + x0 * bb
-            work[base:base + (x1 - x0 + 1) * bb] = color * (x1 - x0 + 1)
+            work[base : base + (x1 - x0 + 1) * bb] = color * (x1 - x0 + 1)
 
     def _draw_walls(self, work: bytearray, visible) -> None:
         """Dessine les murs dans work. visible(x, y) filtre par cellule
@@ -181,21 +212,23 @@ class MazeRenderer:
         iw, ih = self.iw, self.ih
 
         def hband(x0, x1, y):
-            x0 = max(0, x0); x1 = min(iw, x1)
+            x0 = max(0, x0)
+            x1 = min(iw, x1)
             for t in range(THICK):
                 yy = y + t
                 if 0 <= yy < ih and x1 > x0:
                     base = yy * sl + x0 * bb
-                    work[base:base + (x1 - x0) * bb] = wb * (x1 - x0)
+                    work[base : base + (x1 - x0) * bb] = wb * (x1 - x0)
 
         def vband(x, y0, y1):
-            y0 = max(0, y0); y1 = min(ih, y1)
+            y0 = max(0, y0)
+            y1 = min(ih, y1)
             for t in range(THICK):
                 xx = x + t
                 if 0 <= xx < iw:
                     for yy in range(y0, y1):
                         off = yy * sl + xx * bb
-                        work[off:off + bb] = wb
+                        work[off : off + bb] = wb
 
         for y in range(maze.rows):
             for x in range(maze.cols):
@@ -213,7 +246,9 @@ class MazeRenderer:
                 if y == maze.rows - 1 and (v & Maze.WALL_S):
                     hband(px, px + cell, py + cell)
 
-    def render(self, session: GameSession) -> None:
+    def render(
+        self, session: GameSession, pac_prog: float, ghost_prog: float
+    ) -> None:
         if not self._ready or self._mvb is None:
             return
         cell = self.cell
@@ -239,45 +274,87 @@ class MazeRenderer:
 
         # Pacgums
         gum_r = max(1, cell // 8)
-        for (gx, gy) in session.pacgums:
+        for gx, gy in session.pacgums:
             if visible(gx, gy):
-                self._fill_dot(work, mox + gx * cell + half,
-                               moy + gy * cell + half, gum_r, self._gum_b)
+                self._fill_dot(
+                    work,
+                    mox + gx * cell + half,
+                    moy + gy * cell + half,
+                    gum_r,
+                    self._gum_b,
+                )
 
         # Super-pacgums (plus gros)
         super_r = max(2, cell // 3)
-        for (gx, gy) in session.super_pacgums:
+        for gx, gy in session.super_pacgums:
             if visible(gx, gy):
-                self._fill_dot(work, mox + gx * cell + half,
-                               moy + gy * cell + half, super_r, self._super_b)
-
-        # Pac-Man (toujours visible)
-        self._fill_dot(work, mox + px * cell + half,
-                       moy + py * cell + half,
-                       max(3, half - 2), self._pac_b)
-
-        # Fantomes
-        for g in getattr(session, "ghosts", []):
-            if g.state == EntityState.DEAD:
-                continue
-            if not visible(g.x, g.y):
-                continue
-            col = FRIGHT_COLOR if g.state == EntityState.POWERED else g.color
-            gcol = self._pack(col, self.endian)
-            self._fill_dot(work, mox + g.x * cell + half,
-                           moy + g.y * cell + half, max(3, half - 3), gcol)
+                self._fill_dot(
+                    work,
+                    mox + gx * cell + half,
+                    moy + gy * cell + half,
+                    super_r,
+                    self._super_b,
+                )
 
         n = min(len(self._mvb), len(work))
         self._mvb[:n] = work[:n]
         self.mlx.mlx_put_image_to_window(
             self.mlx_ptr, self.win_ptr, self._img, 0, 0
         )
+
+        # Lerp helper
+        def lerp(p0: int, p1: int, t: float) -> float:
+            return p0 + (p1 - p0) * t
+
+        p_x = lerp(session.pacman.prev_x, session.pacman.x, pac_prog)
+        p_y = lerp(session.pacman.prev_y, session.pacman.y, pac_prog)
+
+        dx, dy = session.pacman.dir_x, session.pacman.dir_y
+        d_str = "right"
+        if dx == -1:
+            d_str = "left"
+        elif dy == -1:
+            d_str = "up"
+        elif dy == 1:
+            d_str = "down"
+
+        frame = int(time.time() * 10) % 3
+        pac_sprite = self.sprites["pacman"][d_str][frame]["ptr"]
+        draw_px = int(self.mox + p_x * self.cell)
+        draw_py = int(self.moy + p_y * self.cell)
+        self.mlx.mlx_put_image_to_window(
+            self.mlx_ptr, self.win_ptr, pac_sprite, draw_px, draw_py
+        )
+
+        # Draw Ghost Sprites
+        for g in getattr(session, "ghosts", []):
+            if g.state == EntityState.DEAD or not visible(g.x, g.y):
+                continue
+
+            g_x = lerp(g.prev_x, g.x, ghost_prog)
+            g_y = lerp(g.prev_y, g.y, ghost_prog)
+
+            sprite_name = (
+                "powered"
+                if g.state == EntityState.POWERED
+                else self.ghost_mapping.get(g.color, "blinky")
+            )
+            ghost_sprite = self.sprites["ghosts"][sprite_name]["ptr" if sprite_name != "powered" else 0]
+
+            draw_gx = int(self.mox + g_x * self.cell)
+            draw_gy = int(self.moy + g_y * self.cell)
+            self.mlx.mlx_put_image_to_window(
+                self.mlx_ptr, self.win_ptr, ghost_sprite, draw_gx, draw_gy
+            )
+
         # HUD dans la bande du haut (au-dessus du labyrinthe, rafraichi)
-        hud = (f"Level: {getattr(session, 'level', 1)}   "
-               f"Score: {session.score}   Lives: {session.lives}   "
-               f"Gums: {len(session.pacgums)}   "
-               f"Super: {len(session.super_pacgums)}   "
-               f"Time: {session.time_left()}")
+        hud = (
+            f"Level: {getattr(session, 'level', 1)}   "
+            f"Score: {session.score}   Lives: {session.lives}   "
+            f"Gums: {len(session.pacgums)}   "
+            f"Super: {len(session.super_pacgums)}   "
+            f"Time: {session.time_left()}"
+        )
         if session.powered:
             hud += f"   Power: {session.power_time_left()}"
         if shadow is not None:

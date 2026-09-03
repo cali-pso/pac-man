@@ -198,6 +198,8 @@ class GameSession:
         self._respawn_dead()
         target = (self.pacman.x, self.pacman.y)
         for g in self.ghosts:
+            g.prev_x = g.x
+            g.prev_y = g.y
             occupied = {(o.x, o.y) for o in self.ghosts if o is not g}
             g.update(self.maze.cells, self.maze.rows, self.maze.cols,
                      target, occupied)
