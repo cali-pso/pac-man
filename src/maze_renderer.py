@@ -273,17 +273,22 @@ class MazeRenderer:
             self.mlx_ptr, self.win_ptr, self._img, 0, 0
         )
         # HUD dans la bande du haut (au-dessus du labyrinthe, rafraichi)
+        mode = getattr(session, "mode", "Normal")
+        # Mode Normal : HUD minimal impose par le sujet (Level/Score/Lives/Time).
         hud = (f"Level: {getattr(session, 'level', 1)}   "
-               f"Score: {session.score}   Lives: {session.lives}   "
-               f"Gums: {len(session.pacgums)}   "
-               f"Super: {len(session.super_pacgums)}   "
+               f"Score: {session.score}   "
+               f"Lives: {session.lives}   "
                f"Time: {session.time_left()}")
-        if session.powered:
-            hud += f"   Power: {session.power_time_left()}"
-        if shadow is not None:
-            hud += f"   Light: {shadow.radius:.1f}"
-            if shadow.shine_active():
-                hud += f"   SHINE: {shadow.shine_time_left()}"
+        # Autres modes : on ajoute les infos supplementaires.
+        if mode != "Normal":
+            hud += (f"   Gums: {len(session.pacgums)}"
+                    f"   Super: {len(session.super_pacgums)}")
+            if session.powered:
+                hud += f"   Power: {session.power_time_left()}"
+            if shadow is not None:
+                hud += f"   Light: {shadow.radius:.1f}"
+                if shadow.shine_active():
+                    hud += f"   SHINE: {shadow.shine_time_left()}"
         self.mlx.mlx_string_put(
             self.mlx_ptr, self.win_ptr, self.mox, 18, HUD_COLOR, hud
         )

@@ -88,6 +88,7 @@ class App:
             self._total_levels = max(1, int(getattr(ruleset, "level", 10)))
             self.session = GameSession(maze, **self._session_kwargs(ruleset))
             self.session.level = self._level
+            self.session.mode = self._current_mode
             self._attach_mode()
             self._finish_handled = False
             self._entering_name = False
@@ -132,6 +133,7 @@ class App:
         kw["start_score"] = self.session.score   # on garde le score
         self.session = GameSession(maze, **kw)
         self.session.level = self._level
+        self.session.mode = self._current_mode
         self._attach_mode()
         self.maze_renderer.prepare(maze)
         self._last_ghost = time.time()
