@@ -10,6 +10,7 @@ PAC_COLOR: int = 0xFFFF00
 GUM_COLOR: int = 0xF0C0A0
 SUPER_COLOR: int = 0xFFFFFF
 FRIGHT_COLOR: int = 0x2222EE  # fantome comestible
+MEGA_COLOR: int = 0xFF33FF   # mega pacgum
 BG_COLOR: int = 0x000000
 HUD_COLOR: int = 0xFFFFFF
 MARGIN: int = 30
@@ -47,6 +48,7 @@ class MazeRenderer:
         self._pac_b = b""
         self._gum_b = b""
         self._super_b = b""
+        self._mega_b = b""
 
     def _flush(self) -> None:
         try:
@@ -151,6 +153,7 @@ class MazeRenderer:
         self._pac_b = self._pack(PAC_COLOR, endian)
         self._gum_b = self._pack(GUM_COLOR, endian)
         self._super_b = self._pack(SUPER_COLOR, endian)
+        self._mega_b = self._pack(MEGA_COLOR, endian)
         self._ready = True
 
     def _fill_dot(self, work: bytearray, cx: int, cy: int, r: int,
@@ -224,7 +227,11 @@ class MazeRenderer:
         shadow = getattr(session, "shadow", None)
         px, py = session.pacman.x, session.pacman.y
 
+        mega_on = getattr(session, "mega_active", False)
+
         def visible(ex: int, ey: int) -> bool:
+            if mega_on:
+                return True  # mega actif : toute la map eclairee
             return shadow is None or shadow.is_visible(ex, ey, px, py)
 
         if shadow is None:
@@ -250,6 +257,13 @@ class MazeRenderer:
             if visible(gx, gy):
                 self._fill_dot(work, mox + gx * cell + half,
                                moy + gy * cell + half, super_r, self._super_b)
+
+        # Mega pacgum (present tant que non mange)
+        mpos = getattr(session, "mega_pos", None)
+        if mpos is not None and visible(mpos[0], mpos[1]):
+            self._fill_dot(work, mox + mpos[0] * cell + half,
+                           moy + mpos[1] * cell + half,
+                           max(3, half), self._mega_b)
 
         # Pac-Man (toujours visible)
         self._fill_dot(work, mox + px * cell + half,
@@ -283,6 +297,8 @@ class MazeRenderer:
         if mode != "Normal":
             hud += (f"   Gums: {len(session.pacgums)}"
                     f"   Super: {len(session.super_pacgums)}")
+            if getattr(session, "mega_active", False):
+                hud += "   MEGA!"
             if session.powered:
                 hud += f"   Power: {session.power_time_left()}"
             if shadow is not None:

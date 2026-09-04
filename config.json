@@ -17,6 +17,9 @@
 	},
 	"shadow_mode": {
 		"game_mode": "shadow",
+		"width": 20,
+    	"height": 15,
+    	"seed": 42,
 		"flashlight_radius": 3,
 		"max_level_time": 120,
 		"points_per_ghost": 400,
@@ -27,16 +30,25 @@
 	},
 	"hardcore_mode": {
 		"game_mode": "hardcore",
+		"width": 20,
+    	"height": 15,
+    	"seed": 42,
 		"lives": 1,
 		"level": 20,
 		"max_level_time": 60
 	},
 	"roguelite_mode": {
 		"game_mode": "roguelite",
+		"width": 20,
+    	"height": 15,
+    	"seed": 42,
 		"bonus_multiplier": 1
 	},
 	"2_player_mode": {
 		"game_mode": "2_player",
+		"width": 20,
+    	"height": 15,
+    	"seed": 42,
 		"control_switch_time_range": [10, 20]
 	}
 }

@@ -6,11 +6,13 @@ A placer dans src/game_session.py
 
 from __future__ import annotations
 
+import random
 import time
-from typing import List, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 from src.entities import EntityState, Ghost, PacMan
 from src.maze_loader import Maze
+from src import mega_pacgum
 
 ALL_WALLS = Maze.WALL_N | Maze.WALL_E | Maze.WALL_S | Maze.WALL_W  # 15
 GHOST_COLORS = [0xFF0000, 0xFFB8FF, 0x00FFFF, 0xFFB852]
@@ -22,7 +24,8 @@ class GameSession:
     def __init__(self, maze: Maze, points_per_pacgum: int = 10,
                  points_per_super_pacgum: int = 50, points_per_ghost: int = 200,
                  lives: int = 3, max_time: int = 90,
-                 start_score: int = 0, no_supers: bool = False) -> None:
+                 start_score: int = 0, no_supers: bool = False,
+                 mode: str = "Normal") -> None:
         self.maze = maze
         self.points_per_pacgum = points_per_pacgum
         self.points_per_super_pacgum = points_per_super_pacgum
@@ -30,6 +33,7 @@ class GameSession:
         self.lives = lives
         self.max_time = max_time
         self.no_supers = no_supers
+        self.mode = mode
         self.start_time = time.time()
         self._paused_at = 0.0
         self.score = start_score
@@ -41,11 +45,18 @@ class GameSession:
         self.powered = False
         self.power_end = 0.0
 
+        # Mega pacgum
+        self.mega_pos: Optional[Tuple[int, int]] = None
+        self.mega_active = False
+        self.last_ate_mega = False
+        self._mega_frozen_left = 0
+
         sx, sy = self._find_spawn()
         self.pacman = PacMan(sx, sy)
         self.pacgums: Set[Tuple[int, int]] = self._seed_pacgums()
         self.super_pacgums: Set[Tuple[int, int]] = self._seed_supers()
         self.ghosts: List[Ghost] = self._spawn_ghosts()
+        self._maybe_spawn_mega()
 
     # --- Cases praticables -------------------------------------------------
 
@@ -116,9 +127,21 @@ class GameSession:
             g.dead_until += delta
         self._paused_at = 0.0
 
+    def _maybe_spawn_mega(self) -> None:
+        """Tire au sort l'apparition du mega selon le mode."""
+        if random.random() >= mega_pacgum.spawn_chance_for(self.mode):
+            return
+        # Le place sur une case de pacgum au hasard (donc atteignable).
+        if self.pacgums:
+            pos = random.choice(list(self.pacgums))
+            self.pacgums.discard(pos)
+            self.mega_pos = pos
+
     # --- Timer & power -----------------------------------------------------
 
     def time_left(self) -> int:
+        if self.mega_active:
+            return self._mega_frozen_left  # timer gele par le mega
         return max(0, int(self.max_time - (time.time() - self.start_time)))
 
     def power_time_left(self) -> int:
@@ -134,7 +157,8 @@ class GameSession:
         self.powered = True
         self.power_end = time.time() + POWER_DURATION
         for g in self.ghosts:
-            g.state = EntityState.POWERED
+            if g.state != EntityState.DEAD:
+                g.state = EntityState.POWERED  # ne ressuscite pas les morts
 
     def update_power(self) -> bool:
         """Termine le mode POWERED si le temps est ecoule.
@@ -143,9 +167,13 @@ class GameSession:
             self.powered = False
             for g in self.ghosts:
                 if g.state != EntityState.DEAD:
-                    g.state = EntityState.NORMAL
+                    g.state = (EntityState.POWERED if self.mega_active
+                               else EntityState.NORMAL)
             return True
         return False
+
+    def _score_mult(self) -> float:
+        return mega_pacgum.SCORE_MULTIPLIER if self.mega_active else 1.0
 
     # --- Collision ---------------------------------------------------------
 
@@ -155,14 +183,29 @@ class GameSession:
             return False  # fantome en cours de reapparition : inoffensif
         if not (g.x == self.pacman.x and g.y == self.pacman.y):
             return False
-        if self.powered:
-            self.score += self.points_per_ghost
+        if self.powered or self.mega_active:
+            self.score += int(self.points_per_ghost * self._score_mult())
             g.state = EntityState.DEAD
-            g.dead_until = time.time() + GHOST_RESPAWN_DELAY
-            g.reset_position()  # attend au coin pendant le delai
+            if self.mega_active:
+                g.dead_until = float("inf")  # mega : ne revient pas du niveau
+            else:
+                g.dead_until = time.time() + GHOST_RESPAWN_DELAY
+            g.reset_position()
             return False
         self._hit()
         return True
+
+    def _eat_mega(self) -> None:
+        """Effets du mega : gel du timer, fantomes figes+comestibles, x1.5."""
+        self.mega_pos = None
+        self.mega_active = True
+        self.last_ate_mega = True
+        self._mega_frozen_left = max(
+            0, int(self.max_time - (time.time() - self.start_time)))
+        for g in self.ghosts:
+            g.state = EntityState.POWERED  # comestibles
+            g.can_move = False             # figes
+            g.dir_x, g.dir_y = 0, 0
 
     def _hit(self) -> None:
         self.lives -= 1
@@ -180,6 +223,7 @@ class GameSession:
     def try_move(self, dx: int, dy: int) -> bool:
         self.last_ate = False
         self.last_ate_super = False
+        self.last_ate_mega = False
         if self.won or self.game_over:
             return False
         moved = self.pacman.try_move(
@@ -188,13 +232,16 @@ class GameSession:
         if not moved:
             return False
         pos = (self.pacman.x, self.pacman.y)
-        if pos in self.pacgums:
+        mult = self._score_mult()
+        if pos == self.mega_pos:
+            self._eat_mega()
+        elif pos in self.pacgums:
             self.pacgums.discard(pos)
-            self.score += self.points_per_pacgum
+            self.score += int(self.points_per_pacgum * mult)
             self.last_ate = True
         elif pos in self.super_pacgums:
             self.super_pacgums.discard(pos)
-            self.score += self.points_per_super_pacgum
+            self.score += int(self.points_per_super_pacgum * mult)
             self.last_ate_super = True
             self._enter_power()
         if not self.pacgums and not self.super_pacgums:
@@ -211,8 +258,9 @@ class GameSession:
         for g in self.ghosts:
             if g.state == EntityState.DEAD and now >= getattr(
                     g, "dead_until", 0.0):
-                g.state = EntityState.POWERED if self.powered \
-                    else EntityState.NORMAL
+                g.state = (EntityState.POWERED
+                           if (self.powered or self.mega_active)
+                           else EntityState.NORMAL)
 
     def update_ghosts(self) -> None:
         if self.won or self.game_over:

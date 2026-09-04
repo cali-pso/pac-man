@@ -12,6 +12,7 @@ from src.game_session import GameSession
 from src.highscore import HighscoreStore
 from src.mode_shadow import ShadowMode
 from src import mode_hardcore
+from src import mega_pacgum
 from src.utils import GameState, Key, center_x_str
 
 GHOST_INTERVAL: float = 0.28  # cadence des fantomes
@@ -90,6 +91,8 @@ class App:
             self.session.level = self._level
             self.session.mode = self._current_mode
             self._attach_mode()
+            if self.session.mega_pos is not None:
+                self.audio.play_sound("mega_alert.wav")
             self._finish_handled = False
             self._entering_name = False
             self._name_buffer = ""
@@ -108,6 +111,7 @@ class App:
             points_per_ghost=ruleset.points_per_ghost,
             lives=ruleset.lives,
             max_time=ruleset.max_level_time,
+            mode=self._current_mode,
         )
         if self._current_mode == "Hardcore":
             kw = mode_hardcore.apply_to_ruleset_kwargs(kw)
@@ -135,6 +139,8 @@ class App:
         self.session.level = self._level
         self.session.mode = self._current_mode
         self._attach_mode()
+        if self.session.mega_pos is not None:
+            self.audio.play_sound("mega_alert.wav")
         self.maze_renderer.prepare(maze)
         self._last_ghost = time.time()
         self._render_game()
@@ -229,7 +235,11 @@ class App:
         if dx == 0 and dy == 0:
             return
         if self.session.try_move(dx, dy):
-            if self.session.last_ate:
+            if self.session.last_ate_mega:
+                self.audio.play_sound("mega_pickup.wav")
+                self.audio.stop_music()
+                self.audio.play_music("mega_active.wav")
+            elif self.session.last_ate:
                 self.audio.play_sound("pacgum.wav")
                 if self.shadow is not None:
                     self.shadow.on_pacgum()
@@ -280,9 +290,11 @@ class App:
         if d is None:
             return
         now = time.time()
-        # Changement de direction -> on bouge tout de suite ; sinon on plafonne
-        # la cadence a STEP_INTERVAL (ignore les repetitions trop rapprochees).
-        if d != self._move_dir or (now - self._last_step) >= STEP_INTERVAL:
+        interval = STEP_INTERVAL
+        if self.session is not None and self.session.mega_active:
+            interval = STEP_INTERVAL * mega_pacgum.SPEED_FACTOR
+        # Changement de direction -> pas immediat ; sinon cadence plafonnee.
+        if d != self._move_dir or (now - self._last_step) >= interval:
             self._move_dir = d
             self._last_step = now
             self._step_pac()
