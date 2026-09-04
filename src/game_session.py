@@ -22,14 +22,16 @@ class GameSession:
     def __init__(self, maze: Maze, points_per_pacgum: int = 10,
                  points_per_super_pacgum: int = 50, points_per_ghost: int = 200,
                  lives: int = 3, max_time: int = 90,
-                 start_score: int = 0) -> None:
+                 start_score: int = 0, no_supers: bool = False) -> None:
         self.maze = maze
         self.points_per_pacgum = points_per_pacgum
         self.points_per_super_pacgum = points_per_super_pacgum
         self.points_per_ghost = points_per_ghost
         self.lives = lives
         self.max_time = max_time
+        self.no_supers = no_supers
         self.start_time = time.time()
+        self._paused_at = 0.0
         self.score = start_score
         self.won = False
         self.game_over = False
@@ -82,6 +84,8 @@ class GameSession:
         return gums
 
     def _seed_supers(self) -> Set[Tuple[int, int]]:
+        if self.no_supers:
+            return set()  # mode hardcore : pas de super-pacgums
         supers: Set[Tuple[int, int]] = set()
         for pos in self._corners():
             supers.add(pos)
@@ -93,6 +97,24 @@ class GameSession:
         for i, (gx, gy) in enumerate(self._corners()):
             ghosts.append(Ghost(gx, gy, GHOST_COLORS[i % len(GHOST_COLORS)]))
         return ghosts
+
+    # --- Pause -------------------------------------------------------------
+
+    def pause(self) -> None:
+        """Gele le temps (timer, power, reapparition des fantomes)."""
+        if self._paused_at == 0.0:
+            self._paused_at = time.time()
+
+    def resume(self) -> None:
+        """Reprend : decale tous les horodatages de la duree de pause."""
+        if self._paused_at == 0.0:
+            return
+        delta = time.time() - self._paused_at
+        self.start_time += delta
+        self.power_end += delta
+        for g in self.ghosts:
+            g.dead_until += delta
+        self._paused_at = 0.0
 
     # --- Timer & power -----------------------------------------------------
 
