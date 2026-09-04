@@ -31,6 +31,7 @@ class GameSession:
         self.max_time = max_time
         self.no_supers = no_supers
         self.start_time = time.time()
+        self._paused_at = 0.0
         self.score = start_score
         self.won = False
         self.game_over = False
@@ -96,6 +97,24 @@ class GameSession:
         for i, (gx, gy) in enumerate(self._corners()):
             ghosts.append(Ghost(gx, gy, GHOST_COLORS[i % len(GHOST_COLORS)]))
         return ghosts
+
+    # --- Pause -------------------------------------------------------------
+
+    def pause(self) -> None:
+        """Gele le temps (timer, power, reapparition des fantomes)."""
+        if self._paused_at == 0.0:
+            self._paused_at = time.time()
+
+    def resume(self) -> None:
+        """Reprend : decale tous les horodatages de la duree de pause."""
+        if self._paused_at == 0.0:
+            return
+        delta = time.time() - self._paused_at
+        self.start_time += delta
+        self.power_end += delta
+        for g in self.ghosts:
+            g.dead_until += delta
+        self._paused_at = 0.0
 
     # --- Timer & power -----------------------------------------------------
 

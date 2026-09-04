@@ -15,6 +15,7 @@ from src import mode_hardcore
 from src.utils import GameState, Key, center_x_str
 
 GHOST_INTERVAL: float = 0.28  # cadence des fantomes
+PAUSE_OPTIONS = ["Continue", "Quit"]
 STEP_INTERVAL: float = 0.11   # cadence min entre 2 cases (vitesse de Pac-Man)
 BACKSPACE: int = 65288
 
@@ -54,6 +55,7 @@ class App:
         # Deplacement Pac-Man
         self._move_dir: Tuple[int, int] = (0, 0)
         self._last_step: float = 0.0
+        self._pause_index: int = 0
 
     # --- Transitions -------------------------------------------------------
 
@@ -268,7 +270,7 @@ class App:
                 self._go_to_menu()
             return
         if keycode == Key.ESC:
-            self._go_to_menu()
+            self._enter_pause()
             return
         if self.session is None:
             return
@@ -283,6 +285,57 @@ class App:
             self._last_step = now
             self._step_pac()
 
+    # --- Pause -------------------------------------------------------------
+
+    def _enter_pause(self) -> None:
+        if self.session is None:
+            return
+        self.session.pause()
+        self._reset_move()
+        self._pause_index = 0
+        self.state = GameState.PAUSED
+        self._render_pause()
+
+    def _resume_game(self) -> None:
+        if self.session is None:
+            self._go_to_menu()
+            return
+        self.session.resume()
+        self.state = GameState.PLAYING
+        self._render_game()
+
+    def _render_pause(self) -> None:
+        self.mlx.mlx_clear_window(self.mlx_ptr, self.win_ptr)
+        cy = self.height // 2
+        self._put_center("PAUSED", cy - 60, 0xFFFF00)
+        for i, opt in enumerate(PAUSE_OPTIONS):
+            selected = (i == self._pause_index)
+            color = 0xFFFF00 if selected else 0xFFFFFF
+            prefix = "> " if selected else "  "
+            self._put_center(f"{prefix}{opt}", cy - 10 + i * 30, color)
+        self._put_center(
+            "Up/Down + ENTER  -  ESC to resume", cy + 70, 0x888888
+        )
+        try:
+            self.mlx.mlx_do_sync(self.mlx_ptr)
+        except Exception:
+            pass
+
+    def _handle_pause_key(self, keycode: int) -> None:
+        if keycode in (Key.UP, Key.W):
+            self._pause_index = (self._pause_index - 1) % len(PAUSE_OPTIONS)
+            self._render_pause()
+        elif keycode in (Key.DOWN, Key.S):
+            self._pause_index = (self._pause_index + 1) % len(PAUSE_OPTIONS)
+            self._render_pause()
+        elif keycode in (Key.ENTER, Key.SPACE):
+            if PAUSE_OPTIONS[self._pause_index] == "Continue":
+                self._resume_game()
+            else:
+                self._go_to_menu()
+        elif keycode == Key.ESC:
+            self._resume_game()
+
     # --- Hooks -------------------------------------------------------------
 
     def _key_hook(self, keycode: int, param: Any = None) -> int:
@@ -292,6 +345,9 @@ class App:
             return 0
         elif self.state == GameState.PLAYING:
             self._handle_play_key(keycode)
+            return 0
+        elif self.state == GameState.PAUSED:
+            self._handle_pause_key(keycode)
             return 0
         prev = self.state
         self.menu.handle_key(keycode, self.state)
