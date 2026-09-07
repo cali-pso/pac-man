@@ -80,9 +80,12 @@ class MazeRenderer:
                 "h": img[2],
             }
         path_blue = "src/assets/pacman-art/ghosts/blue_ghost.png"
-        self.sprites["ghosts"]["powered"] = self.mlx.mlx_png_file_to_image(
-            self.mlx_ptr, path_blue
-        )
+        img = self.mlx.mlx_png_file_to_image(self.mlx_ptr, path_blue)
+        self.sprites["ghosts"]["powered"] = {
+            "ptr": img[0],
+            "w": img[1],
+            "h": img[2],
+        }
 
     def _flush(self) -> None:
         try:
@@ -95,6 +98,47 @@ class MazeRenderer:
         fmt = "<I" if endian == 0 else ">I"
         return struct.pack(fmt, 0xFF000000 | (color & 0xFFFFFF))
 
+    def _scale_sprite(
+        self,
+        original_img: object,
+        orig_w: int,
+        orig_h: int,
+        new_w: int,
+        new_h: int,
+    ) -> object:
+        """Nearest-neighbor scaling algorithm for MLX images."""
+        data_orig, bpp_o, sl_o, end_o = self.mlx.mlx_get_data_addr(
+            original_img
+        )
+        orig_bytes = data_orig.cast("B")
+
+        # Create target image
+        new_img = self.mlx.mlx_new_image(self.mlx_ptr, new_w, new_h)
+        data_new, bpp_n, sl_n, end_n = self.mlx.mlx_get_data_addr(new_img)
+        new_bytes = bytearray(sl_n * new_h)
+
+        bpp = bpp_n // 8
+
+        for y in range(new_h):
+            # Map target Y to source Y
+            src_y = int((y / new_h) * orig_h)
+            for x in range(new_w):
+                # Map target X to source X
+                src_x = int((x / new_w) * orig_w)
+
+                src_idx = src_y * sl_o + src_x * bpp
+                dst_idx = y * sl_n + x * bpp
+
+                new_bytes[dst_idx : dst_idx + bpp] = orig_bytes[
+                    src_idx : src_idx + bpp
+                ]
+
+        # Assign the calculated bytes to the new image buffer
+        data_new_mem = data_new.cast("B")
+        data_new_mem[: len(new_bytes)] = new_bytes
+
+        return new_img
+
     def prepare(self, maze: Maze) -> None:
         self._ready = False
         self.mlx.mlx_clear_window(self.mlx_ptr, self.win_ptr)
@@ -102,11 +146,11 @@ class MazeRenderer:
         if cols == 0 or rows == 0:
             return
 
-        # Image plein ecran : HUD + labyrinthe + entites, tout rafraichi.
         iw = self.screen_w
         ih = self.screen_h
         avail_w = self.screen_w - 2 * MARGIN
         avail_h = self.screen_h - 2 * MARGIN - TOP_PAD
+
         cell = max(6, min(avail_w // cols, avail_h // rows))
         maze_w = cell * cols
         maze_h = cell * rows
@@ -168,14 +212,12 @@ class MazeRenderer:
                 if y == rows - 1 and (v & Maze.WALL_S):
                     hband(px, px + cell, py + cell)
 
-        # buf contient fond noir + murs (statique). On garde aussi une
-        # version fond-noir-seul pour le mode shadow (murs dynamiques).
         self._img = img
         self._mvb = data.cast("B")
         self._maze = maze
         self._bg_b = bg_b
         self._wall_b = wall_b
-        self._template = buf  # fond + murs (mode normal)
+        self._template = buf
         self.cell = cell
         self.iw = iw
         self.ih = ih
@@ -184,10 +226,70 @@ class MazeRenderer:
         self.size_line = size_line
         self.bpp_bytes = bpp_bytes
         self.endian = endian
+
         self._pac_b = self._pack(PAC_COLOR, endian)
         self._gum_b = self._pack(GUM_COLOR, endian)
         self._super_b = self._pack(SUPER_COLOR, endian)
+
+        # SCALE SPRITES TO MATCH CELL SIZE
+        # 0.85 multiplier provides visual padding so sprites don't touch walls
+        sprite_size = max(4, int(cell * 0.85))
+        self.scaled_sprites = {"pacman": {}, "ghosts": {}}
+
+        # Process Pac-Man animations
+        for d_str, frames in self.sprites["pacman"].items():
+            self.scaled_sprites["pacman"][d_str] = []
+            for frame in frames:
+                scaled_ptr = self._scale_sprite(
+                    frame["ptr"],
+                    frame["w"],
+                    frame["h"],
+                    sprite_size,
+                    sprite_size,
+                )
+                self.scaled_sprites["pacman"][d_str].append(
+                    {"ptr": scaled_ptr, "w": sprite_size, "h": sprite_size}
+                )
+
+        # Process Ghost static states
+        for name, g_data in self.sprites["ghosts"].items():
+            scaled_ptr = self._scale_sprite(
+                g_data["ptr"],
+                g_data["w"],
+                g_data["h"],
+                sprite_size,
+                sprite_size,
+            )
+            self.scaled_sprites["ghosts"][name] = {
+                "ptr": scaled_ptr,
+                "w": sprite_size,
+                "h": sprite_size,
+            }
+
         self._ready = True
+
+    def _get_dot_spans(self, r: int):
+        """Caches the horizontal spans for drawing a circle of radius r."""
+        spans = []
+        for dy in range(-r, r + 1):
+            spans.append((dy, int((r * r - dy * dy) ** 0.5)))
+        return spans
+
+    def _fill_dot_fast(
+        self, work: bytearray, cx: int, cy: int, spans: list, color: bytes
+    ) -> None:
+        sl = self.size_line
+        bb = self.bpp_bytes
+        for dy, span in spans:
+            yy = cy + dy
+            if yy < 0 or yy >= self.ih:
+                continue
+            x0 = max(0, cx - span)
+            x1 = min(self.iw - 1, cx + span)
+            if x1 < x0:
+                continue
+            base = yy * sl + x0 * bb
+            work[base : base + (x1 - x0 + 1) * bb] = color * (x1 - x0 + 1)
 
     def _fill_dot(
         self, work: bytearray, cx: int, cy: int, r: int, color: bytes
@@ -278,15 +380,20 @@ class MazeRenderer:
             )
             self._draw_walls(work, visible)
 
+        gum_r = max(1, cell // 8)
+        gum_spans = self._get_dot_spans(gum_r)
+        super_r = max(2, cell // 3)
+        super_spans = self._get_dot_spans(super_r)
+
         # Pacgums
         gum_r = max(1, cell // 8)
         for gx, gy in session.pacgums:
             if visible(gx, gy):
-                self._fill_dot(
+                self._fill_dot_fast(
                     work,
                     mox + gx * cell + half,
                     moy + gy * cell + half,
-                    gum_r,
+                    gum_spans,
                     self._gum_b,
                 )
 
@@ -294,11 +401,11 @@ class MazeRenderer:
         super_r = max(2, cell // 3)
         for gx, gy in session.super_pacgums:
             if visible(gx, gy):
-                self._fill_dot(
+                self._fill_dot_fast(
                     work,
                     mox + gx * cell + half,
                     moy + gy * cell + half,
-                    super_r,
+                    super_spans,
                     self._super_b,
                 )
 
@@ -325,11 +432,15 @@ class MazeRenderer:
             d_str = "down"
 
         frame = int(time.time() * 10) % 3
-        pac_sprite = self.sprites["pacman"][d_str][frame]["ptr"]
-        draw_px = int(self.mox + p_x * self.cell)
-        draw_py = int(self.moy + p_y * self.cell)
+        pac_sprite = self.scaled_sprites["pacman"][d_str][frame]["ptr"]
+        pac_data = self.scaled_sprites["pacman"][d_str][frame]
+        off_x = (self.cell - pac_data["w"]) // 2
+        off_y = (self.cell - pac_data["h"]) // 2
+
+        draw_px = int(self.mox + p_x * self.cell) + off_x
+        draw_py = int(self.moy + p_y * self.cell) + off_y
         self.mlx.mlx_put_image_to_window(
-            self.mlx_ptr, self.win_ptr, pac_sprite, draw_px, draw_py
+            self.mlx_ptr, self.win_ptr, pac_data["ptr"], draw_px, draw_py
         )
 
         # Draw Ghost Sprites
@@ -345,15 +456,19 @@ class MazeRenderer:
                 if g.state == EntityState.POWERED
                 else self.ghost_mapping.get(g.color, "blinky")
             )
-            ghost_sprite = self.sprites["ghosts"][sprite_name][
-                "ptr" if sprite_name != "powered" else 0
-            ]
+            # Ghost Centering
+            g_data = self.scaled_sprites["ghosts"][sprite_name]
+            g_off_x = (self.cell - g_data["w"]) // 2
+            g_off_y = (self.cell - g_data["h"]) // 2
 
-            draw_gx = int(self.mox + g_x * self.cell)
-            draw_gy = int(self.moy + g_y * self.cell)
+            draw_gx = int(self.mox + g_x * self.cell) + g_off_x
+            draw_gy = int(self.moy + g_y * self.cell) + g_off_y
             self.mlx.mlx_put_image_to_window(
-                self.mlx_ptr, self.win_ptr, ghost_sprite, draw_gx, draw_gy
+                self.mlx_ptr, self.win_ptr, g_data["ptr"], draw_gx, draw_gy
             )
+        self.mlx.mlx_put_image_to_window(
+            self.mlx_ptr, self.win_ptr, pac_sprite, draw_px, draw_py
+        )
 
         # HUD dans la bande du haut (au-dessus du labyrinthe, rafraichi)
         hud = (
