@@ -1,4 +1,4 @@
-SPAWN_CHANCE: float = 1.0           # 1 % dans les modes concernes
+SPAWN_CHANCE: float = 0.01           # 1 % dans les modes concernes
 SPAWN_CHANCE_HARDCORE: float = 0.005  # 0.5 % en hardcore
 SCORE_MULTIPLIER: float = 1.5   # score x1.5 sur ce qu'on ramasse ensuite
 SPEED_FACTOR: float = 0.5       # cadence de Pac-Man x ce facteur (plus rapide)

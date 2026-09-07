@@ -503,28 +503,55 @@ class MazeRenderer:
             if shadow.shine_active():
                 hud += f"   SHINE: {shadow.shine_time_left()}"
         mode = getattr(session, "mode", "Normal")
-        # Mode Normal : HUD minimal impose par le sujet (Level/Score/Lives/Time).
-        hud = (
-            f"Level: {getattr(session, 'level', 1)}   "
-            f"Score: {session.score}   "
-            f"Lives: {session.lives}   "
-            f"Time: {session.time_left()}"
-        )
-        # Autres modes : on ajoute les infos supplementaires.
+        # Mode Normal : HUD minimal impose par le sujet.
+        segs = [
+            f"Level: {getattr(session, 'level', 1)}",
+            f"Score: {session.score}",
+            f"Lives: {session.lives}",
+            f"Time: {session.time_left()}",
+        ]
+        # Autres modes : infos supplementaires.
         if mode != "Normal":
-            hud += (
-                f"   Gums: {len(session.pacgums)}"
-                f"   Super: {len(session.super_pacgums)}"
-            )
+            segs.append(f"Gums: {len(session.pacgums)}")
+            segs.append(f"Super: {len(session.super_pacgums)}")
+            if mode == "Random":
+                segs.append(f"Player {getattr(session, 'active_player', 1)}")
+            if mode == "Versus":
+                gi = getattr(session, "player_ghost_index", None)
+                if gi is not None:
+                    if gi == 0:
+                        segs.append(f"J2 ghost Blinky")
+                    elif gi == 1:
+                        segs.append(f"J2 ghost Pinky")
+                    elif gi == 2:
+                        segs.append(f"J2 ghost Inky")
+                    elif gi == 3:
+                        segs.append(f"J2 ghost Clyde")
             if getattr(session, "mega_active", False):
-                hud += "   MEGA!"
+                segs.append("MEGA!")
             if session.powered:
-                hud += f"   Power: {session.power_time_left()}"
+                segs.append(f"Power: {session.power_time_left()}")
             if shadow is not None:
-                hud += f"   Light: {shadow.radius:.1f}"
+                segs.append(f"Light: {shadow.radius:.1f}")
                 if shadow.shine_active():
-                    hud += f"   SHINE: {shadow.shine_time_left()}"
-        self.mlx.mlx_string_put(
-            self.mlx_ptr, self.win_ptr, self.mox, 18, HUD_COLOR, hud
-        )
+                    segs.append(f"SHINE: {shadow.shine_time_left()}")
+        # Retour a la ligne quand la barre depasse la largeur de la fenetre.
+        sep = "   "
+        max_chars = max(16, (self.screen_w - 20) // 9)
+        lines = []
+        cur = ""
+        for seg in segs:
+            cand = seg if not cur else cur + sep + seg
+            if len(cand) <= max_chars:
+                cur = cand
+            else:
+                if cur:
+                    lines.append(cur)
+                cur = seg
+        if cur:
+            lines.append(cur)
+        for li, line in enumerate(lines):
+            self.mlx.mlx_string_put(
+                self.mlx_ptr, self.win_ptr, 10, 14 + li * 16, HUD_COLOR, line
+            )
         self._flush()

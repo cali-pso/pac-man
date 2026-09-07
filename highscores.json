@@ -17,6 +17,10 @@
       1260
     ],
     [
+      "qwertyuiop",
+      830
+    ],
+    [
       "ok",
       590
     ],
@@ -65,6 +69,28 @@
     [
       "seb test",
       2630
+    ]
+  ],
+  "Versus": [
+    [
+      "Blablablaa",
+      910
+    ],
+    [
+      "PLAYER",
+      50
+    ]
+  ],
+  "Coop": [
+    [
+      "Blablablaa",
+      520
+    ]
+  ],
+  "Random": [
+    [
+      "Bblablabla",
+      210
     ]
   ],
   "2 Players": []
