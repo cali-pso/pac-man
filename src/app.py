@@ -1,6 +1,7 @@
 import random
 import time
 from typing import Any, Optional, Tuple
+from collections import deque
 from mlx import Mlx
 from src.menu_manager import MenuManager
 from src.intro import IntroScene
@@ -15,9 +16,9 @@ from src import mode_hardcore
 from src import mega_pacgum
 from src.utils import GameState, Key, center_x_str
 
-GHOST_INTERVAL: float = 0.28  # cadence des fantomes
+GHOST_INTERVAL: float = 0.38  # cadence des fantomes
 HOLD_GRACE: float = 0.15  # delai sans repetition avant de considerer relache
-STEP_INTERVAL: float = 0.11  # cadence min entre 2 cases (vitesse de Pac-Man)
+STEP_INTERVAL: float = 0.21  # cadence min entre 2 cases (vitesse de Pac-Man)
 FRAME_INTERVAL: float = 0.016  # rendu continu (~60 fps) pour le lissage
 PAUSE_OPTIONS = ["Continue", "Quit"]
 BACKSPACE: int = 65288
@@ -61,6 +62,20 @@ class App:
         self._last_step: float = 0.0
         self._last_frame: float = 0.0
         self._pause_index: int = 0
+        self.konami_sequence = [
+            Key.UP,
+            Key.UP,
+            Key.DOWN,
+            Key.DOWN,
+            Key.LEFT,
+            Key.RIGHT,
+            Key.LEFT,
+            Key.RIGHT,
+            98,
+            Key.A,  # 'b' is 98, Key.A is 97
+        ]
+        # Initialize the sliding window
+        self.input_buffer = deque(maxlen=len(self.konami_sequence))
 
     # --- Transitions -------------------------------------------------------
 
@@ -297,6 +312,11 @@ class App:
                 self._render_finish()
 
     def _handle_play_key(self, keycode: int) -> None:
+        self.input_buffer.append(keycode)
+
+        if list(self.input_buffer) == self.konami_sequence:
+            self.session.cheat = not self.session.cheat
+            self.input_buffer.clear()
         if self._entering_name:
             self._handle_name_key(keycode)
             return
@@ -307,11 +327,19 @@ class App:
         if keycode == Key.ESC:
             self._enter_pause()
             return
+        elif keycode == Key.I:
+            self.session.invicible = not self.session.invicible
+        elif keycode == Key.N:
+            self._skip_level()
         if self.session is None:
             return
         d = self._dir_for(keycode)
         if d is not None:
             self._next_dir = d
+
+    def _skip_level(self) -> None:
+        self.session.won = True
+        self._progress()
 
     # --- Pause -------------------------------------------------------------
 
@@ -458,4 +486,3 @@ class App:
             self.mlx.mlx_release(self.mlx_ptr)
         except Exception:
             pass
-

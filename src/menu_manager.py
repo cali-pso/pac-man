@@ -174,6 +174,11 @@ class MenuManager:
             "- Eat pacgums to win the level",
             "- Avoid ghosts unless powered up",
             "- Press P to pause game",
+            "- To toggle cheat mode: ",
+            "[UP UP DOWN DOWN LEFT RIGHT LEFT RIGHT A B]",
+            "- In cheat mode:",
+            "- I for Invicibility (God Mode)",
+            "- N to skip current level",
         ]
 
         start_y = int(HEIGHT / 3)
@@ -192,7 +197,7 @@ class MenuManager:
             self.mlx_ptr,
             self.win_ptr,
             center_x_str(footer),
-            start_y + 150,
+            start_y + 250,
             int(Color.CYAN),
             footer,
         )

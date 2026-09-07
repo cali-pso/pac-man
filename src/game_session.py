@@ -65,6 +65,10 @@ class GameSession:
         self.ghosts: List[Ghost] = self._spawn_ghosts()
         self._maybe_spawn_mega()
 
+        # cheats
+        self.cheat = False
+        self.invicible = False
+
     # --- Cases praticables -------------------------------------------------
 
     def _is_open(self, x: int, y: int) -> bool:
@@ -191,7 +195,7 @@ class GameSession:
                            ghost_prog: float) -> bool:
         """Collision basee sur les positions AFFICHEES (interpolees), pour
         coller a ce que le joueur voit. Retourne True si Pac-Man est mort."""
-        if self.won or self.game_over:
+        if self.won or self.game_over or self.invicible:
             return False
         for g in self.ghosts:
             if g.state == EntityState.DEAD:
