@@ -16,8 +16,10 @@ from src import mega_pacgum
 from src.utils import GameState, Key, center_x_str
 
 GHOST_INTERVAL: float = 0.28  # cadence des fantomes
+HOLD_GRACE: float = 0.15  # delai sans repetition avant de considerer relache
+STEP_INTERVAL: float = 0.11  # cadence min entre 2 cases (vitesse de Pac-Man)
 PAUSE_OPTIONS = ["Continue", "Quit"]
-STEP_INTERVAL: float = 0.11   # cadence min entre 2 cases (vitesse de Pac-Man)
+STEP_INTERVAL: float = 0.11  # cadence min entre 2 cases (vitesse de Pac-Man)
 BACKSPACE: int = 65288
 
 
@@ -55,14 +57,11 @@ class App:
         self._total_levels: int = 1
         # Deplacement Pac-Man
         self._move_dir: Tuple[int, int] = (0, 0)
+        self._next_dir: Tuple[int, int] = (0, 0)
         self._last_step: float = 0.0
         self._pause_index: int = 0
 
     # --- Transitions -------------------------------------------------------
-
-    def _reset_move(self) -> None:
-        self._move_dir = (0, 0)
-        self._last_step = 0.0
 
     def _go_to_menu(self) -> None:
         self.audio.stop_music()
@@ -70,7 +69,6 @@ class App:
         self.session = None
         self._entering_name = False
         self._name_buffer = ""
-        self._reset_move()
         self.state = GameState.MAIN_MENU
         self.menu.state = GameState.MAIN_MENU
         self.menu.selected_index = 0
@@ -96,7 +94,6 @@ class App:
             self._finish_handled = False
             self._entering_name = False
             self._name_buffer = ""
-            self._reset_move()
             self.maze_renderer.prepare(maze)
             self._render_game()
             self._last_ghost = time.time()
@@ -120,8 +117,7 @@ class App:
 
     def _attach_mode(self) -> None:
         """Cree le controleur du mode choisi et l'attache a la session."""
-        self.shadow = (ShadowMode()
-                       if self._current_mode == "Shadow" else None)
+        self.shadow = ShadowMode() if self._current_mode == "Shadow" else None
         if self.session is not None:
             self.session.shadow = self.shadow
 
@@ -133,8 +129,8 @@ class App:
         seed = random.randint(1, 2_000_000_000)  # niveaux 2+ : aleatoire
         maze = self.maze_loader.load((ruleset.width, ruleset.height), seed)
         kw = self._session_kwargs(ruleset)
-        kw["lives"] = self.session.lives         # on garde les vies
-        kw["start_score"] = self.session.score   # on garde le score
+        kw["lives"] = self.session.lives  # on garde les vies
+        kw["start_score"] = self.session.score  # on garde le score
         self.session = GameSession(maze, **kw)
         self.session.level = self._level
         self.session.mode = self._current_mode
@@ -166,7 +162,8 @@ class App:
         if self.session.game_over:
             self.audio.play_sound("death.wav")
         self._entering_name = self.highscores.qualifies(
-            self._current_mode, self.session.score)
+            self._current_mode, self.session.score
+        )
         self._name_buffer = ""
 
     # --- Rendu -------------------------------------------------------------
@@ -182,7 +179,14 @@ class App:
         if self.session.won or self.session.game_over:
             self._render_finish()
             return
-        self.maze_renderer.render(self.session)
+
+        now = time.time()
+        pac_prog = max(0.0, min(1.0, (now - self._last_step) / STEP_INTERVAL))
+        ghost_prog = max(
+            0.0, min(1.0, (now - self._last_ghost) / GHOST_INTERVAL)
+        )
+
+        self.maze_renderer.render(self.session, pac_prog, ghost_prog)
 
     def _render_finish(self) -> None:
         self.mlx.mlx_clear_window(self.mlx_ptr, self.win_ptr)
@@ -194,15 +198,18 @@ class App:
             self._put_center(f"Name: {self._name_buffer}_", cy, 0x00FFFF)
             self._put_center(
                 "Type your name  -  ENTER to confirm  -  ESC to skip",
-                cy + 40, 0x888888,
+                cy + 40,
+                0x888888,
             )
         else:
             if s.won:
-                self._put_center(f"YOU WIN!  Score: {s.score}", cy - 10,
-                                 0xFFFF00)
+                self._put_center(
+                    f"YOU WIN!  Score: {s.score}", cy - 10, 0xFFFF00
+                )
             else:
-                self._put_center(f"GAME OVER  Score: {s.score}", cy - 10,
-                                 0xFF4444)
+                self._put_center(
+                    f"GAME OVER  Score: {s.score}", cy - 10, 0xFF4444
+                )
             self._put_center("Press ESC to return to menu", cy + 20, 0x888888)
         try:
             self.mlx.mlx_do_sync(self.mlx_ptr)
@@ -231,10 +238,20 @@ class App:
     def _step_pac(self) -> None:
         if self.session is None or self._finished():
             return
-        dx, dy = self._move_dir
-        if dx == 0 and dy == 0:
-            return
-        if self.session.try_move(dx, dy):
+        self.session.pacman.prev_x = self.session.pacman.x
+        self.session.pacman.prev_y = self.session.pacman.y
+        next_dir = self._next_dir
+        moved = False
+        if next_dir != (0, 0) and self.session.try_move(
+            next_dir[0], next_dir[1]
+        ):
+            self._move_dir = next_dir
+            moved = True
+        elif self._move_dir != (0, 0) and self.session.try_move(
+            self._move_dir[0], self._move_dir[1]
+        ):
+            moved = True
+        if moved:
             if self.session.last_ate_mega:
                 self.audio.play_sound("mega_pickup.wav")
                 self.audio.stop_music()
@@ -259,8 +276,8 @@ class App:
         if keycode == Key.ENTER:
             if self.session is not None:
                 self.highscores.add(
-                    self._current_mode, self._name_buffer,
-                    self.session.score)
+                    self._current_mode, self._name_buffer, self.session.score
+                )
             self._go_to_menu()
         elif keycode == Key.ESC:
             self._go_to_menu()
@@ -287,17 +304,8 @@ class App:
         if self.session is None:
             return
         d = self._dir_for(keycode)
-        if d is None:
-            return
-        now = time.time()
-        interval = STEP_INTERVAL
-        if self.session is not None and self.session.mega_active:
-            interval = STEP_INTERVAL * mega_pacgum.SPEED_FACTOR
-        # Changement de direction -> pas immediat ; sinon cadence plafonnee.
-        if d != self._move_dir or (now - self._last_step) >= interval:
-            self._move_dir = d
-            self._last_step = now
-            self._step_pac()
+        if d is not None:
+            self._next_dir = d
 
     # --- Pause -------------------------------------------------------------
 
@@ -305,7 +313,6 @@ class App:
         if self.session is None:
             return
         self.session.pause()
-        self._reset_move()
         self._pause_index = 0
         self.state = GameState.PAUSED
         self._render_pause()
@@ -323,7 +330,7 @@ class App:
         cy = self.height // 2
         self._put_center("PAUSED", cy - 60, 0xFFFF00)
         for i, opt in enumerate(PAUSE_OPTIONS):
-            selected = (i == self._pause_index)
+            selected = i == self._pause_index
             color = 0xFFFF00 if selected else 0xFFFFFF
             prefix = "> " if selected else "  "
             self._put_center(f"{prefix}{opt}", cy - 10 + i * 30, color)
@@ -375,9 +382,16 @@ class App:
             if self.intro.update():
                 self._go_to_menu()
             return 0
-        if (self.state == GameState.PLAYING and self.session is not None
-                and not self._finished()):
+        if (
+            self.state == GameState.PLAYING
+            and self.session is not None
+            and not self._finished()
+        ):
             now = time.time()
+            # Pac-Man en maintien : avance a SA cadence tant que ca repete
+            if now - self._last_step >= STEP_INTERVAL:
+                self._last_step = now
+                self._step_pac()
             if self.shadow is not None:
                 self.shadow.update()
             # Fin du mode POWERED
@@ -386,8 +400,11 @@ class App:
                     self.audio.stop_music()
                     self.audio.play_music("level.wav")
             # Fantomes
-            if (self.session is not None and not self._finished()
-                    and now - self._last_ghost >= GHOST_INTERVAL):
+            if (
+                self.session is not None
+                and not self._finished()
+                and now - self._last_ghost >= GHOST_INTERVAL
+            ):
                 self._last_ghost = now
                 self.session.check_timeout()
                 if not self.session.game_over:

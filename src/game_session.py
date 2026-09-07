@@ -21,11 +21,18 @@ GHOST_RESPAWN_DELAY = 4.0  # secondes avant qu'un fantome mange revienne
 
 
 class GameSession:
-    def __init__(self, maze: Maze, points_per_pacgum: int = 10,
-                 points_per_super_pacgum: int = 50, points_per_ghost: int = 200,
-                 lives: int = 3, max_time: int = 90,
-                 start_score: int = 0, no_supers: bool = False,
-                 mode: str = "Normal") -> None:
+    def __init__(
+        self,
+        maze: Maze,
+        points_per_pacgum: int = 10,
+        points_per_super_pacgum: int = 50,
+        points_per_ghost: int = 200,
+        lives: int = 3,
+        max_time: int = 90,
+        start_score: int = 0,
+        no_supers: bool = False,
+        mode: str = "Normal",
+    ) -> None:
         self.maze = maze
         self.points_per_pacgum = points_per_pacgum
         self.points_per_super_pacgum = points_per_super_pacgum
@@ -167,8 +174,11 @@ class GameSession:
             self.powered = False
             for g in self.ghosts:
                 if g.state != EntityState.DEAD:
-                    g.state = (EntityState.POWERED if self.mega_active
-                               else EntityState.NORMAL)
+                    g.state = (
+                        EntityState.POWERED
+                        if self.mega_active
+                        else EntityState.NORMAL
+                    )
             return True
         return False
 
@@ -201,10 +211,11 @@ class GameSession:
         self.mega_active = True
         self.last_ate_mega = True
         self._mega_frozen_left = max(
-            0, int(self.max_time - (time.time() - self.start_time)))
+            0, int(self.max_time - (time.time() - self.start_time))
+        )
         for g in self.ghosts:
             g.state = EntityState.POWERED  # comestibles
-            g.can_move = False             # figes
+            g.can_move = False  # figes
             g.dir_x, g.dir_y = 0, 0
 
     def _hit(self) -> None:
@@ -257,10 +268,11 @@ class GameSession:
         now = time.time()
         for g in self.ghosts:
             if g.state == EntityState.DEAD and now >= getattr(
-                    g, "dead_until", 0.0):
-                g.state = (EntityState.POWERED
-                           if (self.powered or self.mega_active)
-                           else EntityState.NORMAL)
+                g, "dead_until", 0.0
+            ):
+                g.state = (
+                    EntityState.POWERED if self.powered else EntityState.NORMAL
+                )
 
     def update_ghosts(self) -> None:
         if self.won or self.game_over:
@@ -268,8 +280,15 @@ class GameSession:
         self._respawn_dead()
         target = (self.pacman.x, self.pacman.y)
         for g in self.ghosts:
+            g.prev_x = g.x
+            g.prev_y = g.y
             occupied = {(o.x, o.y) for o in self.ghosts if o is not g}
-            g.update(self.maze.cells, self.maze.rows, self.maze.cols,
-                     target, occupied)
+            g.update(
+                self.maze.cells,
+                self.maze.rows,
+                self.maze.cols,
+                target,
+                occupied,
+            )
             if self._touch(g):
                 return

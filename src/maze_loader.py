@@ -33,9 +33,7 @@ class MazeLoader:
         size: Tuple[int, int],
         seed: int = 42,
     ) -> Maze:
-        maze_gen = MazeGenerator(
-            size=size, perfect=False, seed=seed
-        )
+        maze_gen = MazeGenerator(size=size, perfect=False, seed=seed)
         cells = self._extract_cells(maze_gen)
         entry = self._as_xy(maze_gen.maze_entry)
         exit_ = self._as_xy(maze_gen.maze_exit)

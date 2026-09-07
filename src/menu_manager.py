@@ -108,13 +108,21 @@ class MenuManager:
         mode = MODES[self.hs_index]
         title = f"HIGHSCORES - {mode}"
         self.mlx.mlx_string_put(
-            self.mlx_ptr, self.win_ptr, center_x_str(title),
-            int(HEIGHT / 5), int(Color.YELLOW), title,
+            self.mlx_ptr,
+            self.win_ptr,
+            center_x_str(title),
+            int(HEIGHT / 5),
+            int(Color.YELLOW),
+            title,
         )
         switch = "<  Left / Right to switch mode  >"
         self.mlx.mlx_string_put(
-            self.mlx_ptr, self.win_ptr, center_x_str(switch),
-            int(HEIGHT / 5) + 24, int(Color.GRAY), switch,
+            self.mlx_ptr,
+            self.win_ptr,
+            center_x_str(switch),
+            int(HEIGHT / 5) + 24,
+            int(Color.GRAY),
+            switch,
         )
 
         entries = self.highscores.top(mode) if self.highscores else []
@@ -122,20 +130,32 @@ class MenuManager:
         if not entries:
             empty = "No scores yet - be the first!"
             self.mlx.mlx_string_put(
-                self.mlx_ptr, self.win_ptr, center_x_str(empty),
-                start_y, int(Color.WHITE), empty,
+                self.mlx_ptr,
+                self.win_ptr,
+                center_x_str(empty),
+                start_y,
+                int(Color.WHITE),
+                empty,
             )
         for i, (name, score) in enumerate(entries, start=1):
             text = f"{i:>2}. {name:<10} - {score} pts"
             self.mlx.mlx_string_put(
-                self.mlx_ptr, self.win_ptr, center_x_str(text),
-                start_y + (i * 22), int(Color.WHITE), text,
+                self.mlx_ptr,
+                self.win_ptr,
+                center_x_str(text),
+                start_y + (i * 22),
+                int(Color.WHITE),
+                text,
             )
 
         footer = "Press ESC to return to Menu"
         self.mlx.mlx_string_put(
-            self.mlx_ptr, self.win_ptr, center_x_str(footer),
-            start_y + 12 * 22 + 20, int(Color.CYAN), footer,
+            self.mlx_ptr,
+            self.win_ptr,
+            center_x_str(footer),
+            start_y + 12 * 22 + 20,
+            int(Color.CYAN),
+            footer,
         )
 
     def _draw_instructions(self) -> None:

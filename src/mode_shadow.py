@@ -9,6 +9,7 @@ DECAY_INTERVAL: float = 1
 DECAY_STEP: float = 1.1
 SHINE_DURATION: float = 8.0
 
+
 class ShadowMode:
     def __init__(self) -> None:
         self.radius: float = LIGHT_RADIUS_START
