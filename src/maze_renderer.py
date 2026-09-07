@@ -66,13 +66,19 @@ class MazeRenderer:
             for i in range(1, 4):
                 path = f"src/assets/pacman-art/pacman-{d}/{i}.png"
                 img = self.mlx.mlx_png_file_to_image(self.mlx_ptr, path)
-                self.sprites["pacman"][d].append({"ptr": img[0], "w": img[1], "h": img[2]})
-                
+                self.sprites["pacman"][d].append(
+                    {"ptr": img[0], "w": img[1], "h": img[2]}
+                )
+
         # Same structural approach for ghosts:
         for name in ghost_files.values():
             path = f"src/assets/pacman-art/ghosts/{name}.png"
             img = self.mlx.mlx_png_file_to_image(self.mlx_ptr, path)
-            self.sprites["ghosts"][name] = {"ptr": img[0], "w": img[1], "h": img[2]}
+            self.sprites["ghosts"][name] = {
+                "ptr": img[0],
+                "w": img[1],
+                "h": img[2],
+            }
         path_blue = "src/assets/pacman-art/ghosts/blue_ghost.png"
         self.sprites["ghosts"]["powered"] = self.mlx.mlx_png_file_to_image(
             self.mlx_ptr, path_blue
@@ -339,7 +345,9 @@ class MazeRenderer:
                 if g.state == EntityState.POWERED
                 else self.ghost_mapping.get(g.color, "blinky")
             )
-            ghost_sprite = self.sprites["ghosts"][sprite_name]["ptr" if sprite_name != "powered" else 0]
+            ghost_sprite = self.sprites["ghosts"][sprite_name][
+                "ptr" if sprite_name != "powered" else 0
+            ]
 
             draw_gx = int(self.mox + g_x * self.cell)
             draw_gy = int(self.moy + g_y * self.cell)
@@ -361,6 +369,26 @@ class MazeRenderer:
             hud += f"   Light: {shadow.radius:.1f}"
             if shadow.shine_active():
                 hud += f"   SHINE: {shadow.shine_time_left()}"
+        mode = getattr(session, "mode", "Normal")
+        # Mode Normal : HUD minimal impose par le sujet (Level/Score/Lives/Time).
+        hud = (
+            f"Level: {getattr(session, 'level', 1)}   "
+            f"Score: {session.score}   "
+            f"Lives: {session.lives}   "
+            f"Time: {session.time_left()}"
+        )
+        # Autres modes : on ajoute les infos supplementaires.
+        if mode != "Normal":
+            hud += (
+                f"   Gums: {len(session.pacgums)}"
+                f"   Super: {len(session.super_pacgums)}"
+            )
+            if session.powered:
+                hud += f"   Power: {session.power_time_left()}"
+            if shadow is not None:
+                hud += f"   Light: {shadow.radius:.1f}"
+                if shadow.shine_active():
+                    hud += f"   SHINE: {shadow.shine_time_left()}"
         self.mlx.mlx_string_put(
             self.mlx_ptr, self.win_ptr, self.mox, 18, HUD_COLOR, hud
         )

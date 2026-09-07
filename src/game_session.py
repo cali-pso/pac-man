@@ -19,17 +19,26 @@ GHOST_RESPAWN_DELAY = 4.0  # secondes avant qu'un fantome mange revienne
 
 
 class GameSession:
-    def __init__(self, maze: Maze, points_per_pacgum: int = 10,
-                 points_per_super_pacgum: int = 50, points_per_ghost: int = 200,
-                 lives: int = 3, max_time: int = 90,
-                 start_score: int = 0) -> None:
+    def __init__(
+        self,
+        maze: Maze,
+        points_per_pacgum: int = 10,
+        points_per_super_pacgum: int = 50,
+        points_per_ghost: int = 200,
+        lives: int = 3,
+        max_time: int = 90,
+        start_score: int = 0,
+        no_supers: bool = False,
+    ) -> None:
         self.maze = maze
         self.points_per_pacgum = points_per_pacgum
         self.points_per_super_pacgum = points_per_super_pacgum
         self.points_per_ghost = points_per_ghost
         self.lives = lives
         self.max_time = max_time
+        self.no_supers = no_supers
         self.start_time = time.time()
+        self._paused_at = 0.0
         self.score = start_score
         self.won = False
         self.game_over = False
@@ -82,6 +91,8 @@ class GameSession:
         return gums
 
     def _seed_supers(self) -> Set[Tuple[int, int]]:
+        if self.no_supers:
+            return set()  # mode hardcore : pas de super-pacgums
         supers: Set[Tuple[int, int]] = set()
         for pos in self._corners():
             supers.add(pos)
@@ -93,6 +104,24 @@ class GameSession:
         for i, (gx, gy) in enumerate(self._corners()):
             ghosts.append(Ghost(gx, gy, GHOST_COLORS[i % len(GHOST_COLORS)]))
         return ghosts
+
+    # --- Pause -------------------------------------------------------------
+
+    def pause(self) -> None:
+        """Gele le temps (timer, power, reapparition des fantomes)."""
+        if self._paused_at == 0.0:
+            self._paused_at = time.time()
+
+    def resume(self) -> None:
+        """Reprend : decale tous les horodatages de la duree de pause."""
+        if self._paused_at == 0.0:
+            return
+        delta = time.time() - self._paused_at
+        self.start_time += delta
+        self.power_end += delta
+        for g in self.ghosts:
+            g.dead_until += delta
+        self._paused_at = 0.0
 
     # --- Timer & power -----------------------------------------------------
 
@@ -188,9 +217,11 @@ class GameSession:
         now = time.time()
         for g in self.ghosts:
             if g.state == EntityState.DEAD and now >= getattr(
-                    g, "dead_until", 0.0):
-                g.state = EntityState.POWERED if self.powered \
-                    else EntityState.NORMAL
+                g, "dead_until", 0.0
+            ):
+                g.state = (
+                    EntityState.POWERED if self.powered else EntityState.NORMAL
+                )
 
     def update_ghosts(self) -> None:
         if self.won or self.game_over:
@@ -201,7 +232,12 @@ class GameSession:
             g.prev_x = g.x
             g.prev_y = g.y
             occupied = {(o.x, o.y) for o in self.ghosts if o is not g}
-            g.update(self.maze.cells, self.maze.rows, self.maze.cols,
-                     target, occupied)
+            g.update(
+                self.maze.cells,
+                self.maze.rows,
+                self.maze.cols,
+                target,
+                occupied,
+            )
             if self._touch(g):
                 return
