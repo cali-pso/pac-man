@@ -166,7 +166,9 @@ class App:
         kw = self._session_kwargs(ruleset)
         kw["lives"] = self.session.lives  # on garde les vies
         kw["start_score"] = self.session.score  # on garde le score
+        cheat = self.session.cheat
         self.session = GameSession(maze, **kw)
+        self.session.cheat = cheat
         self.session.level = self._level
         self.session.mode = self._current_mode
         self._attach_mode()
@@ -365,9 +367,9 @@ class App:
         if keycode == Key.ESC:
             self._enter_pause()
             return
-        elif keycode == Key.I:
+        elif keycode == Key.I and self.session.cheat:
             self.session.invicible = not self.session.invicible
-        elif keycode == Key.N:
+        elif keycode == Key.N and self.session.cheat:
             self._skip_level()
         if self.session is None:
             return
