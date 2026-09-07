@@ -356,6 +356,8 @@ class App:
 
         if list(self.input_buffer) == self.konami_sequence:
             self.session.cheat = not self.session.cheat
+            if self.session.cheat is False:
+                self.session.invicible = False
             self.input_buffer.clear()
         if self._entering_name:
             self._handle_name_key(keycode)
