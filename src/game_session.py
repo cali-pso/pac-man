@@ -187,12 +187,25 @@ class GameSession:
 
     # --- Collision ---------------------------------------------------------
 
-    def _touch(self, g: Ghost) -> bool:
-        """Gere le contact Pac-Man / fantome. Retourne True si Pac-Man meurt."""
-        if g.state == EntityState.DEAD:
-            return False  # fantome en cours de reapparition : inoffensif
-        if not (g.x == self.pacman.x and g.y == self.pacman.y):
+    def resolve_collisions(self, pac_fx: float, pac_fy: float,
+                           ghost_prog: float) -> bool:
+        """Collision basee sur les positions AFFICHEES (interpolees), pour
+        coller a ce que le joueur voit. Retourne True si Pac-Man est mort."""
+        if self.won or self.game_over:
             return False
+        for g in self.ghosts:
+            if g.state == EntityState.DEAD:
+                continue
+            gfx = g.prev_x + (g.x - g.prev_x) * ghost_prog
+            gfy = g.prev_y + (g.y - g.prev_y) * ghost_prog
+            if abs(gfx - pac_fx) < 0.5 and abs(gfy - pac_fy) < 0.5:
+                if self._resolve_contact(g):
+                    return True
+        return False
+
+    def _resolve_contact(self, g: Ghost) -> bool:
+        """Contact confirme : mange le fantome (power/mega) ou perd une vie.
+        Retourne True si Pac-Man meurt."""
         if self.powered or self.mega_active:
             self.score += int(self.points_per_ghost * self._score_mult())
             g.state = EntityState.DEAD
@@ -257,9 +270,6 @@ class GameSession:
             self._enter_power()
         if not self.pacgums and not self.super_pacgums:
             self.won = True
-        for g in list(self.ghosts):
-            if self._touch(g):
-                break
         return True
 
     # --- Fantomes ----------------------------------------------------------
@@ -290,5 +300,3 @@ class GameSession:
                 target,
                 occupied,
             )
-            if self._touch(g):
-                return

@@ -1,3 +1,4 @@
+import random
 from typing import Any, List, Optional, Tuple
 from mazegenerator import MazeGenerator
 
@@ -34,6 +35,10 @@ class MazeLoader:
         seed: int = 42,
     ) -> Maze:
         maze_gen = MazeGenerator(size=size, perfect=False, seed=seed)
+        # MazeGenerator fixe random.seed en interne pour etre reproductible.
+        # On restaure un aleatoire non-deterministe pour le reste du jeu
+        # (position du mega, IA des fantomes, etc.).
+        random.seed()
         cells = self._extract_cells(maze_gen)
         entry = self._as_xy(maze_gen.maze_entry)
         exit_ = self._as_xy(maze_gen.maze_exit)

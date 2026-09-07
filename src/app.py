@@ -18,8 +18,8 @@ from src.utils import GameState, Key, center_x_str
 GHOST_INTERVAL: float = 0.28  # cadence des fantomes
 HOLD_GRACE: float = 0.15  # delai sans repetition avant de considerer relache
 STEP_INTERVAL: float = 0.11  # cadence min entre 2 cases (vitesse de Pac-Man)
+FRAME_INTERVAL: float = 0.016  # rendu continu (~60 fps) pour le lissage
 PAUSE_OPTIONS = ["Continue", "Quit"]
-STEP_INTERVAL: float = 0.11  # cadence min entre 2 cases (vitesse de Pac-Man)
 BACKSPACE: int = 65288
 
 
@@ -59,9 +59,15 @@ class App:
         self._move_dir: Tuple[int, int] = (0, 0)
         self._next_dir: Tuple[int, int] = (0, 0)
         self._last_step: float = 0.0
+        self._last_frame: float = 0.0
         self._pause_index: int = 0
 
     # --- Transitions -------------------------------------------------------
+
+    def _reset_move(self) -> None:
+        """Stoppe le deplacement de Pac-Man (direction et buffer a zero)."""
+        self._move_dir = (0, 0)
+        self._next_dir = (0, 0)
 
     def _go_to_menu(self) -> None:
         self.audio.stop_music()
@@ -377,6 +383,21 @@ class App:
             self._start_game(self.menu.chosen_mode)
         return 0
 
+    def _resolve_visual_collisions(self, now: float) -> None:
+        """Verifie la collision fantome/Pac-Man sur les positions AFFICHEES."""
+        s = self.session
+        if s is None or self._finished():
+            return
+        pac_prog = max(0.0, min(1.0, (now - self._last_step) / STEP_INTERVAL))
+        ghost_prog = max(
+            0.0, min(1.0, (now - self._last_ghost) / GHOST_INTERVAL)
+        )
+        pm = s.pacman
+        pfx = pm.prev_x + (pm.x - pm.prev_x) * pac_prog
+        pfy = pm.prev_y + (pm.y - pm.prev_y) * pac_prog
+        if s.resolve_collisions(pfx, pfy, ghost_prog):
+            self._reset_move()  # Pac-Man est mort : on stoppe le mouvement
+
     def _loop_hook(self, *args: Any) -> int:
         if self.state == GameState.INTRO:
             if self.intro.update():
@@ -410,6 +431,13 @@ class App:
                 if not self.session.game_over:
                     self.session.update_ghosts()
                 self._progress()
+            # Collision visuelle + rendu continu (lissage)
+            if now - self._last_frame >= FRAME_INTERVAL:
+                self._last_frame = now
+                self._resolve_visual_collisions(now)
+                if self._finished():
+                    self._on_finish()
+                self._render_game()
         return 0
 
     def run(self) -> None:
@@ -430,3 +458,4 @@ class App:
             self.mlx.mlx_release(self.mlx_ptr)
         except Exception:
             pass
+
