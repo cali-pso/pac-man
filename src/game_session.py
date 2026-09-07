@@ -106,7 +106,7 @@ class GameSession:
         start = (self.pacman.x, self.pacman.y)
         for y in range(self.maze.rows):
             for x in range(self.maze.cols):
-                if self._is_open(x, y) and (x, y) != start:
+                if self._is_open(x, y) and (x, y) != start and random.random() < 0.80:
                     gums.add((x, y))
         return gums
 

@@ -27,7 +27,7 @@ BACKSPACE: int = 65288
 
 
 class App:
-    def __init__(self, width: int, height: int, title: str) -> None:
+    def __init__(self, width: int, height: int, title: str, config_filename: str) -> None:
         self.width = width
         self.height = height
         self.mlx = Mlx()
@@ -37,7 +37,7 @@ class App:
         )
         self.audio = AudioManager()
         config_parser = ConfigParser()
-        self.rulesets = config_parser.load_config("config.json")
+        self.rulesets = config_parser.load_config(config_filename)
         self.highscores = HighscoreStore("highscores.json")
         self.state = GameState.INTRO
         self.intro = IntroScene(self.mlx, self.mlx_ptr, self.win_ptr)
