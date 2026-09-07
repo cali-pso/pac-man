@@ -1,5 +1,6 @@
 import random
 import time
+import traceback
 from typing import Any, Optional, Tuple
 from collections import deque
 from mlx import Mlx
@@ -15,6 +16,7 @@ from src.mode_shadow import ShadowMode
 from src import mode_hardcore
 from src import mega_pacgum
 from src.utils import GameState, Key, center_x_str
+from src import mode_2players
 
 GHOST_INTERVAL: float = 0.38  # cadence des fantomes
 HOLD_GRACE: float = 0.15  # delai sans repetition avant de considerer relache
@@ -59,6 +61,8 @@ class App:
         # Deplacement Pac-Man
         self._move_dir: Tuple[int, int] = (0, 0)
         self._next_dir: Tuple[int, int] = (0, 0)
+        self._active_player: int = 1
+        self._next_switch: float = 0.0
         self._last_step: float = 0.0
         self._last_frame: float = 0.0
         self._pause_index: int = 0
@@ -95,12 +99,18 @@ class App:
         self.menu.selected_index = 0
         self.menu.render()
 
+    def _ruleset_key(self, mode: str) -> str:
+        """Les sous-modes 2 joueurs partagent le ruleset '2 Players'."""
+        if mode in ("Versus", "Coop", "Random"):
+            return "2 Players"
+        return mode
+
     def _start_game(self, mode: str) -> None:
         self.audio.stop_music()
         self.audio.play_music("level.wav")
         self._current_mode = mode
         try:
-            ruleset = self.rulesets[mode]
+            ruleset = self.rulesets[self._ruleset_key(mode)]
             maze = self.maze_loader.load(
                 (ruleset.width, ruleset.height), ruleset.seed
             )
@@ -110,6 +120,7 @@ class App:
             self.session.level = self._level
             self.session.mode = self._current_mode
             self._attach_mode()
+            self._init_random()
             if self.session.mega_pos is not None:
                 self.audio.play_sound("mega_alert.wav")
             self._finish_handled = False
@@ -119,7 +130,10 @@ class App:
             self._render_game()
             self._last_ghost = time.time()
         except Exception as exc:
-            print(str(exc))
+            print("[start_game] ECHEC:", repr(exc))
+            traceback.print_exc()
+            self.session = None
+            self._go_to_menu()  # on ne reste pas bloque en PLAYING sans partie
 
     def _session_kwargs(self, ruleset) -> dict:
         """Parametres de GameSession pour le mode courant (presets inclus)."""
@@ -146,7 +160,7 @@ class App:
 
     def _next_level(self) -> None:
         self._level += 1
-        ruleset = self.rulesets[self._current_mode]
+        ruleset = self.rulesets[self._ruleset_key(self._current_mode)]
         seed = random.randint(1, 2_000_000_000)  # niveaux 2+ : aleatoire
         maze = self.maze_loader.load((ruleset.width, ruleset.height), seed)
         kw = self._session_kwargs(ruleset)
@@ -156,6 +170,7 @@ class App:
         self.session.level = self._level
         self.session.mode = self._current_mode
         self._attach_mode()
+        self._init_random()
         if self.session.mega_pos is not None:
             self.audio.play_sound("mega_alert.wav")
         self.maze_renderer.prepare(maze)
@@ -243,6 +258,29 @@ class App:
         )
 
     # --- Deplacement Pac-Man ----------------------------------------------
+
+    def _init_random(self) -> None:
+        self._active_player = 1
+        if self.session is not None:
+            self.session.active_player = 1
+        if self._current_mode == "Random":
+            self._next_switch = time.time() + random.uniform(
+                mode_2players.SWITCH_MIN, mode_2players.SWITCH_MAX)
+        else:
+            self._next_switch = 0.0
+        if self._current_mode == "Versus" and self.session is not None:
+            idx = (self._level - 1) % len(self.session.ghosts)
+            self.session.set_player_ghost(idx)
+
+    def _pac_dir_for(self, keycode: int):
+        """Direction de Pac-Man selon le sous-mode 2 joueurs."""
+        if self._current_mode == "Coop":
+            return mode_2players.coop_dir(keycode)
+        if self._current_mode == "Random":
+            return mode_2players.player_dir(keycode, self._active_player)
+        if self._current_mode == "Versus":
+            return mode_2players.player_dir(keycode, 1)  # J1 = WASD
+        return self._dir_for(keycode)
 
     @staticmethod
     def _dir_for(keycode: int) -> Optional[Tuple[int, int]]:
@@ -333,7 +371,12 @@ class App:
             self._skip_level()
         if self.session is None:
             return
-        d = self._dir_for(keycode)
+        if self._current_mode == "Versus":
+            gd = mode_2players.player_dir(keycode, 2)  # J2 = fleches -> fantome
+            if gd is not None:
+                self.session.set_ghost_direction(*gd)
+                return
+        d = self._pac_dir_for(keycode)
         if d is not None:
             self._next_dir = d
 
@@ -437,6 +480,12 @@ class App:
             and not self._finished()
         ):
             now = time.time()
+            if self._current_mode == "Random" and now >= self._next_switch:
+                self._active_player = 2 if self._active_player == 1 else 1
+                self.session.active_player = self._active_player
+                self._next_switch = now + random.uniform(
+                    mode_2players.SWITCH_MIN, mode_2players.SWITCH_MAX)
+                self._reset_move()
             # Pac-Man en maintien : avance a SA cadence tant que ca repete
             if now - self._last_step >= STEP_INTERVAL:
                 self._last_step = now

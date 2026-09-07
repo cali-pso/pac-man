@@ -19,7 +19,17 @@ MAX_NAME_LEN = 10
 Entry = Tuple[str, int]
 
 # Ordre des tableaux (utilise pour la bascule gauche/droite au menu)
-MODES = ["Normal", "Hardcore", "Shadow", "Roguelite", "2 Players"]
+MODES = ["Normal", "Hardcore", "Shadow", "Roguelite",
+         "Versus", "Coop", "Random"]
+
+# Pages de l'ecran highscores : (titre, [modes affiches cote a cote]).
+PAGES = [
+    ("Normal", ["Normal"]),
+    ("Hardcore", ["Hardcore"]),
+    ("Shadow", ["Shadow"]),
+    ("Roguelite", ["Roguelite"]),
+    ("2 Players", ["Versus", "Coop", "Random"]),
+]
 
 
 class HighscoreStore:

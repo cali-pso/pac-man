@@ -10,7 +10,7 @@ import random
 import time
 from typing import List, Optional, Set, Tuple
 
-from src.entities import EntityState, Ghost, PacMan
+from src.entities import Entity, EntityState, Ghost, PacMan
 from src.maze_loader import Maze
 from src import mega_pacgum
 
@@ -57,6 +57,11 @@ class GameSession:
         self.mega_active = False
         self.last_ate_mega = False
         self._mega_frozen_left = 0
+
+        # Versus : fantome pilote par le joueur 2
+        self.player_ghost_index: Optional[int] = None
+        self.ghost_dir: Tuple[int, int] = (0, 0)
+        self.ghost_next_dir: Tuple[int, int] = (0, 0)
 
         sx, sy = self._find_spawn()
         self.pacman = PacMan(sx, sy)
@@ -245,6 +250,8 @@ class GameSession:
             for g in self.ghosts:
                 g.reset_position()
                 g.state = EntityState.NORMAL
+            self.ghost_dir = (0, 0)
+            self.ghost_next_dir = (0, 0)
 
     # --- Pac-Man -----------------------------------------------------------
 
@@ -287,15 +294,47 @@ class GameSession:
                 g.state = (
                     EntityState.POWERED if self.powered else EntityState.NORMAL
                 )
+                if getattr(g, "is_player", False):
+                    self.ghost_dir = (0, 0)
+                    self.ghost_next_dir = (0, 0)
+
+    def set_player_ghost(self, index: int) -> None:
+        """Designe le fantome pilote par J2 (Versus). Change a chaque niveau."""
+        for gi, g in enumerate(self.ghosts):
+            g.is_player = (gi == index)
+        if 0 <= index < len(self.ghosts):
+            self.player_ghost_index = index
+        self.ghost_dir = (0, 0)
+        self.ghost_next_dir = (0, 0)
+
+    def set_ghost_direction(self, dx: int, dy: int) -> None:
+        """Direction voulue par J2 pour son fantome (buffer de virage)."""
+        self.ghost_next_dir = (dx, dy)
+
+    def _move_player_ghost(self, g: Ghost) -> None:
+        if not g.can_move or g.state == EntityState.DEAD:
+            return
+        cells, rows, cols = self.maze.cells, self.maze.rows, self.maze.cols
+        nx, ny = self.ghost_next_dir
+        if (nx or ny) and Entity.can_step(cells, g.x, g.y, nx, ny, rows, cols):
+            self.ghost_dir = self.ghost_next_dir
+        dx, dy = self.ghost_dir
+        if (dx or dy) and Entity.can_step(cells, g.x, g.y, dx, dy, rows, cols):
+            g.dir_x, g.dir_y = dx, dy
+            g.x += dx
+            g.y += dy
 
     def update_ghosts(self) -> None:
         if self.won or self.game_over:
             return
         self._respawn_dead()
         target = (self.pacman.x, self.pacman.y)
-        for g in self.ghosts:
+        for i, g in enumerate(self.ghosts):
             g.prev_x = g.x
             g.prev_y = g.y
+            if getattr(g, "is_player", False):
+                self._move_player_ghost(g)  # Versus : pilote par J2
+                continue
             occupied = {(o.x, o.y) for o in self.ghosts if o is not g}
             g.update(
                 self.maze.cells,

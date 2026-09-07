@@ -37,6 +37,7 @@ class Entity(ABC):
         self.can_move = True
         self.state = EntityState.NORMAL
         self.dead_until = 0.0
+        self.is_player = False
 
     def reset_position(self) -> None:
         self.x = self.spawn_x
