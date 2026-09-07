@@ -519,16 +519,11 @@ class MazeRenderer:
                 segs.append(f"Power: {session.power_time_left()}")
             if shadow is not None:
                 segs.append(f"Light: {shadow.radius:.1f}")
-                if shadow.shine_active():
-                    hud += f"   SHINE: {shadow.shine_time_left()}"
+                segs.append(f"SHINE: {shadow.shine_time_left()}")
         if session.cheat:
-            hud += f"    CHEATS: ON"
+            segs.append(f"CHEATS: ON")
         if session.invicible:
-            hud += f"   GOD MODE: ON"
-        self.mlx.mlx_string_put(
-            self.mlx_ptr, self.win_ptr, self.mox, 18, HUD_COLOR, hud
-        )
-        segs.append(f"SHINE: {shadow.shine_time_left()}")
+            segs.append(f"GOD MODE: ON")
         # Retour a la ligne quand la barre depasse la largeur de la fenetre.
         sep = "   "
         max_chars = max(16, (self.screen_w - 20) // 9)
