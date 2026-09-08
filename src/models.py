@@ -13,6 +13,11 @@ class RuleSet(BaseModel):
     points_per_ghost: int = 200
     seed: Any = 42
     max_level_time: int = 90
+    # Valeurs "moteur" (configurables) :
+    ghost_speed: float = 0.38          # secondes entre 2 pas des fantomes
+    pac_speed: float = 0.21            # secondes entre 2 pas de Pac-Man
+    power_duration: float = 8.0        # duree du super-pacgum (comestible)
+    ghost_respawn_delay: float = 4.0   # delai avant reapparition d'un mange
 
     @model_validator(mode="before")
     @classmethod

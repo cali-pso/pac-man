@@ -32,6 +32,8 @@ class GameSession:
         start_score: int = 0,
         no_supers: bool = False,
         mode: str = "Normal",
+        power_duration: float = POWER_DURATION,
+        ghost_respawn_delay: float = GHOST_RESPAWN_DELAY,
     ) -> None:
         self.maze = maze
         self.points_per_pacgum = points_per_pacgum
@@ -41,6 +43,8 @@ class GameSession:
         self.max_time = max_time
         self.no_supers = no_supers
         self.mode = mode
+        self.power_duration = power_duration
+        self.ghost_respawn_delay = ghost_respawn_delay
         self.start_time = time.time()
         self._paused_at = 0.0
         self.score = start_score
@@ -171,7 +175,7 @@ class GameSession:
 
     def _enter_power(self) -> None:
         self.powered = True
-        self.power_end = time.time() + POWER_DURATION
+        self.power_end = time.time() + self.power_duration
         for g in self.ghosts:
             if g.state != EntityState.DEAD:
                 g.state = EntityState.POWERED  # ne ressuscite pas les morts
@@ -221,7 +225,7 @@ class GameSession:
             if self.mega_active:
                 g.dead_until = float("inf")  # mega : ne revient pas du niveau
             else:
-                g.dead_until = time.time() + GHOST_RESPAWN_DELAY
+                g.dead_until = time.time() + self.ghost_respawn_delay
             g.reset_position()
             return False
         self._hit()

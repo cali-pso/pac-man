@@ -1,4 +1,9 @@
 # This is a default config file for our game
+# Valeurs "moteur" ajoutees a chaque mode (modifiables ici) :
+#   ghost_speed          : secondes entre 2 pas des fantomes (plus petit = plus rapide)
+#   pac_speed            : secondes entre 2 pas de Pac-Man
+#   power_duration       : duree du super-pacgum (fantomes comestibles)
+#   ghost_respawn_delay  : delai avant qu'un fantome mange revienne
 {
 	"global": {
 		"highscore_filename": "data/highscores.json"
@@ -13,42 +18,62 @@
 		"points_per_super_pacgum": 50,
 		"points_per_ghost": 200,
 		"seed": 42,
-		"max_level_time": 180
+		"max_level_time": 190,
+		"ghost_speed": 0.38,
+		"pac_speed": 0.21,
+		"power_duration": 8.0,
+		"ghost_respawn_delay": 4.0
 	},
 	"shadow_mode": {
 		"game_mode": "shadow",
 		"width": 20,
-    	"height": 15,
-    	"seed": 42,
+		"height": 15,
+		"seed": 42,
 		"flashlight_radius": 3,
-		"max_level_time": 120,
+		"max_level_time": 190,
 		"points_per_ghost": 400,
 		"flashlight_reduction_time_in_seconds": 10,
 		"flashlight_reduction_step": 1,
 		"flashlight_augmentation_step": 2,
-		"flashlight_augmentation_triggers": ["ghosts", "super_pacgum"]
+		"flashlight_augmentation_triggers": ["ghosts", "super_pacgum"],
+		"ghost_speed": 0.38,
+		"pac_speed": 0.21,
+		"power_duration": 8.0,
+		"ghost_respawn_delay": 4.0
 	},
 	"hardcore_mode": {
 		"game_mode": "hardcore",
 		"width": 20,
-    	"height": 15,
-    	"seed": 42,
+		"height": 15,
+		"seed": 42,
 		"lives": 1,
 		"level": 20,
-		"max_level_time": 60
+		"max_level_time": 190,
+		"ghost_speed": 0.34,
+		"pac_speed": 0.21,
+		"power_duration": 8.0,
+		"ghost_respawn_delay": 4.0
 	},
 	"roguelite_mode": {
 		"game_mode": "roguelite",
 		"width": 20,
-    	"height": 15,
-    	"seed": 42,
-		"bonus_multiplier": 1
+		"height": 15,
+		"seed": 42,
+		"bonus_multiplier": 1,
+		"ghost_speed": 0.38,
+		"pac_speed": 0.21,
+		"power_duration": 8.0,
+		"ghost_respawn_delay": 4.0
 	},
 	"2_player_mode": {
 		"game_mode": "2_player",
 		"width": 20,
-    	"height": 15,
-    	"seed": 42,
-		"control_switch_time_range": [10, 20]
+		"height": 15,
+		"seed": 42,
+		"control_switch_time_range": [10, 20],
+		"ghost_speed": 0.38,
+		"pac_speed": 0.21,
+		"power_duration": 8.0,
+		"ghost_respawn_delay": 4.0
 	}
 }

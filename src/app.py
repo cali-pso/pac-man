@@ -64,6 +64,8 @@ class App:
         self._active_player: int = 1
         self._next_switch: float = 0.0
         self._last_step: float = 0.0
+        self._ghost_speed: float = GHOST_INTERVAL
+        self._pac_speed: float = STEP_INTERVAL
         self._last_frame: float = 0.0
         self._pause_index: int = 0
         self.konami_sequence = [
@@ -111,6 +113,8 @@ class App:
         self._current_mode = mode
         try:
             ruleset = self.rulesets[self._ruleset_key(mode)]
+            self._ghost_speed = ruleset.ghost_speed
+            self._pac_speed = ruleset.pac_speed
             maze = self.maze_loader.load(
                 (ruleset.width, ruleset.height), ruleset.seed
             )
@@ -144,6 +148,8 @@ class App:
             lives=ruleset.lives,
             max_time=ruleset.max_level_time,
             mode=self._current_mode,
+            power_duration=ruleset.power_duration,
+            ghost_respawn_delay=ruleset.ghost_respawn_delay,
         )
         if self._current_mode == "Hardcore":
             kw = mode_hardcore.apply_to_ruleset_kwargs(kw)
@@ -161,6 +167,8 @@ class App:
     def _next_level(self) -> None:
         self._level += 1
         ruleset = self.rulesets[self._ruleset_key(self._current_mode)]
+        self._ghost_speed = ruleset.ghost_speed
+        self._pac_speed = ruleset.pac_speed
         seed = random.randint(1, 2_000_000_000)  # niveaux 2+ : aleatoire
         maze = self.maze_loader.load((ruleset.width, ruleset.height), seed)
         kw = self._session_kwargs(ruleset)
@@ -219,9 +227,9 @@ class App:
             return
 
         now = time.time()
-        pac_prog = max(0.0, min(1.0, (now - self._last_step) / STEP_INTERVAL))
+        pac_prog = max(0.0, min(1.0, (now - self._last_step) / self._pac_speed))
         ghost_prog = max(
-            0.0, min(1.0, (now - self._last_ghost) / GHOST_INTERVAL)
+            0.0, min(1.0, (now - self._last_ghost) / self._ghost_speed)
         )
 
         self.maze_renderer.render(self.session, pac_prog, ghost_prog)
@@ -463,9 +471,9 @@ class App:
         s = self.session
         if s is None or self._finished():
             return
-        pac_prog = max(0.0, min(1.0, (now - self._last_step) / STEP_INTERVAL))
+        pac_prog = max(0.0, min(1.0, (now - self._last_step) / self._pac_speed))
         ghost_prog = max(
-            0.0, min(1.0, (now - self._last_ghost) / GHOST_INTERVAL)
+            0.0, min(1.0, (now - self._last_ghost) / self._ghost_speed)
         )
         pm = s.pacman
         pfx = pm.prev_x + (pm.x - pm.prev_x) * pac_prog
@@ -491,7 +499,7 @@ class App:
                     mode_2players.SWITCH_MIN, mode_2players.SWITCH_MAX)
                 self._reset_move()
             # Pac-Man en maintien : avance a SA cadence tant que ca repete
-            if now - self._last_step >= STEP_INTERVAL:
+            if now - self._last_step >= self._pac_speed:
                 self._last_step = now
                 self._step_pac()
             if self.shadow is not None:
@@ -505,7 +513,7 @@ class App:
             if (
                 self.session is not None
                 and not self._finished()
-                and now - self._last_ghost >= GHOST_INTERVAL
+                and now - self._last_ghost >= self._ghost_speed
             ):
                 self._last_ghost = now
                 self.session.check_timeout()
