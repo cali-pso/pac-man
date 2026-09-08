@@ -14,6 +14,7 @@ from src.game_session import GameSession
 from src.highscore import HighscoreStore
 from src.mode_shadow import ShadowMode
 from src import mode_hardcore
+from src import mega_pacgum
 from src.utils import GameState, Key, center_x_str
 from src import mode_2players
 
@@ -26,8 +27,7 @@ BACKSPACE: int = 65288
 
 
 class App:
-    def __init__(self, width: int, height: int,
-                 title: str, config_filename: str) -> None:
+    def __init__(self, width: int, height: int, title: str, config_filename: str) -> None:
         self.width = width
         self.height = height
         self.mlx = Mlx()
@@ -63,6 +63,8 @@ class App:
         self._next_dir: Tuple[int, int] = (0, 0)
         self._active_player: int = 1
         self._next_switch: float = 0.0
+        self._switch_min: float = mode_2players.SWITCH_MIN
+        self._switch_max: float = mode_2players.SWITCH_MAX
         self._last_step: float = 0.0
         self._ghost_speed: float = GHOST_INTERVAL
         self._pac_speed: float = STEP_INTERVAL
@@ -150,15 +152,29 @@ class App:
             mode=self._current_mode,
             power_duration=ruleset.power_duration,
             ghost_respawn_delay=ruleset.ghost_respawn_delay,
+            mega_spawn_chance=ruleset.mega_spawn_chance,
+            mega_score_multiplier=ruleset.mega_score_multiplier,
         )
         if self._current_mode == "Hardcore":
-            kw = mode_hardcore.apply_to_ruleset_kwargs(kw)
-            kw["no_supers"] = mode_hardcore.NO_SUPER_PACGUMS
+            kw = mode_hardcore.apply_to_ruleset_kwargs(kw, ruleset)
+            kw["no_supers"] = mode_hardcore.no_supers_for(ruleset)
         return kw
 
     def _attach_mode(self) -> None:
         """Cree le controleur du mode choisi et l'attache a la session."""
-        self.shadow = ShadowMode() if self._current_mode == "Shadow" else None
+        if self._current_mode == "Shadow":
+            rs = self.rulesets.get("Shadow")
+            self.shadow = ShadowMode(
+                radius_start=getattr(rs, "flashlight_radius", 3.5),
+                radius_min=getattr(rs, "flashlight_radius_min", 2.0),
+                radius_max=getattr(rs, "flashlight_radius_max", 8.0),
+                pacgum_gain=getattr(rs, "flashlight_augmentation_step", 0.5),
+                decay_interval=getattr(rs, "flashlight_reduction_time", 1.0),
+                decay_step=getattr(rs, "flashlight_reduction_step", 1.1),
+                shine_duration=getattr(rs, "shine_duration", 8.0),
+            )
+        else:
+            self.shadow = None
         if self.session is not None:
             self.session.shadow = self.shadow
 
@@ -227,8 +243,7 @@ class App:
             return
 
         now = time.time()
-        pac_prog = max(0.0, min(
-            1.0, (now - self._last_step) / self._pac_speed))
+        pac_prog = max(0.0, min(1.0, (now - self._last_step) / self._pac_speed))
         ghost_prog = max(
             0.0, min(1.0, (now - self._last_ghost) / self._ghost_speed)
         )
@@ -275,8 +290,13 @@ class App:
         if self.session is not None:
             self.session.active_player = 1
         if self._current_mode == "Random":
-            self._next_switch = time.time() + random.uniform(
+            rs = self.rulesets.get("2 Players")
+            rng = getattr(rs, "control_switch_time_range", None) or (
                 mode_2players.SWITCH_MIN, mode_2players.SWITCH_MAX)
+            self._switch_min = float(rng[0])
+            self._switch_max = float(rng[1])
+            self._next_switch = time.time() + random.uniform(
+                self._switch_min, self._switch_max)
         else:
             self._next_switch = 0.0
         if self._current_mode == "Versus" and self.session is not None:
@@ -385,7 +405,7 @@ class App:
         if self.session is None:
             return
         if self._current_mode == "Versus":
-            gd = mode_2players.player_dir(keycode, 2)  # J2 = fleches->fantome
+            gd = mode_2players.player_dir(keycode, 2)  # J2 = fleches -> fantome
             if gd is not None:
                 self.session.set_ghost_direction(*gd)
                 return
@@ -472,8 +492,7 @@ class App:
         s = self.session
         if s is None or self._finished():
             return
-        pac_prog = max(0.0, min(
-            1.0, (now - self._last_step) / self._pac_speed))
+        pac_prog = max(0.0, min(1.0, (now - self._last_step) / self._pac_speed))
         ghost_prog = max(
             0.0, min(1.0, (now - self._last_ghost) / self._ghost_speed)
         )
@@ -498,7 +517,7 @@ class App:
                 self._active_player = 2 if self._active_player == 1 else 1
                 self.session.active_player = self._active_player
                 self._next_switch = now + random.uniform(
-                    mode_2players.SWITCH_MIN, mode_2players.SWITCH_MAX)
+                    self._switch_min, self._switch_max)
                 self._reset_move()
             # Pac-Man en maintien : avance a SA cadence tant que ca repete
             if now - self._last_step >= self._pac_speed:

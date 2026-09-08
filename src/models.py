@@ -18,6 +18,8 @@ class RuleSet(BaseModel):
     pac_speed: float = 0.21            # secondes entre 2 pas de Pac-Man
     power_duration: float = 8.0        # duree du super-pacgum (comestible)
     ghost_respawn_delay: float = 4.0   # delai avant reapparition d'un mange
+    mega_spawn_chance: float = 0.01    # proba d'apparition du mega par niveau
+    mega_score_multiplier: float = 1.5  # score x ce facteur sous mega
 
     @model_validator(mode="before")
     @classmethod
@@ -35,15 +37,20 @@ class RuleSet(BaseModel):
 
 
 class ShadowRuleSet(RuleSet):
-    flashlight_radius: int = 3
-    flashlight_reduction_time: int = 10
-    flashlight_reduction_step: int = 1
-    flashlight_augmentation_step: int = 2
+    flashlight_radius: float = 3.5          # rayon lumineux de depart
+    flashlight_radius_min: float = 2.0      # plancher du rayon
+    flashlight_radius_max: float = 8.0      # plafond du rayon
+    flashlight_reduction_time: float = 1.0  # intervalle de retrecissement (s)
+    flashlight_reduction_step: float = 1.1  # perte de rayon par intervalle
+    flashlight_augmentation_step: float = 0.5  # gain de rayon par pacgum
+    shine_duration: float = 8.0             # duree du shine (map eclairee)
     flashlight_augmentation_triggers: List[str] = ["ghosts", "super_pacgum"]
 
 
 class HardcoreRuleSet(RuleSet):
-    pass
+    hardcore_lives: int = 1        # vies (1 = une seule tentative)
+    time_factor: float = 0.5       # temps de niveau x ce facteur
+    no_super_pacgums: bool = True  # retirer les super-pacgums
 
 
 class RogueliteRuleSet(RuleSet):

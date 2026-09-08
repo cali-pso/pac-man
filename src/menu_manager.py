@@ -59,8 +59,7 @@ class MenuManager:
 
     # --- Listes de menu ----------------------------------------------------
 
-    def _draw_list(
-            self, title: str, options: List[str], selected: int) -> None:
+    def _draw_list(self, title: str, options: List[str], selected: int) -> None:
         self.mlx.mlx_string_put(
             self.mlx_ptr, self.win_ptr, center_x_str(title),
             int(HEIGHT / 4), int(Color.GREEN), title,
@@ -157,14 +156,6 @@ class MenuManager:
             "- Move: Arrow keys or WASD",
             "- Eat pacgums to win the level",
             "- Avoid ghosts unless powered up",
-
-            "- Press P to pause game",
-            "- To toggle cheat mode: ",
-            "[UP UP DOWN DOWN LEFT RIGHT LEFT RIGHT A B]",
-            "- In cheat mode:",
-            "- I for Invicibility (God Mode)",
-            "- N to skip current level",
-
             "- ESC to pause",
         ]
         start_y = int(HEIGHT / 3)
@@ -175,16 +166,8 @@ class MenuManager:
             )
         footer = "Press ESC to return to Menu"
         self.mlx.mlx_string_put(
-
-            self.mlx_ptr,
-            self.win_ptr,
-            center_x_str(footer),
-            start_y + 250,
-            int(Color.CYAN),
-            footer,
             self.mlx_ptr, self.win_ptr, center_x_str(footer),
             start_y + 150, int(Color.CYAN), footer,
-
         )
 
     # --- Entrees -----------------------------------------------------------

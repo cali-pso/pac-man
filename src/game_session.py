@@ -12,7 +12,6 @@ from typing import List, Optional, Set, Tuple
 
 from src.entities import Entity, EntityState, Ghost, PacMan
 from src.maze_loader import Maze
-from src import mega_pacgum
 
 ALL_WALLS = Maze.WALL_N | Maze.WALL_E | Maze.WALL_S | Maze.WALL_W  # 15
 GHOST_COLORS = [0xFF0000, 0xFFB8FF, 0x00FFFF, 0xFFB852]
@@ -34,6 +33,8 @@ class GameSession:
         mode: str = "Normal",
         power_duration: float = POWER_DURATION,
         ghost_respawn_delay: float = GHOST_RESPAWN_DELAY,
+        mega_spawn_chance: float = 0.0,
+        mega_score_multiplier: float = 1.5,
     ) -> None:
         self.maze = maze
         self.points_per_pacgum = points_per_pacgum
@@ -45,6 +46,8 @@ class GameSession:
         self.mode = mode
         self.power_duration = power_duration
         self.ghost_respawn_delay = ghost_respawn_delay
+        self.mega_spawn_chance = mega_spawn_chance
+        self.mega_score_multiplier = mega_score_multiplier
         self.start_time = time.time()
         self._paused_at = 0.0
         self.score = start_score
@@ -110,8 +113,7 @@ class GameSession:
         start = (self.pacman.x, self.pacman.y)
         for y in range(self.maze.rows):
             for x in range(self.maze.cols):
-                if self._is_open(x, y) \
-                        and (x, y) != start and random.random() < 0.80:
+                if self._is_open(x, y) and (x, y) != start and random.random() < 0.80:
                     gums.add((x, y))
         return gums
 
@@ -150,7 +152,7 @@ class GameSession:
 
     def _maybe_spawn_mega(self) -> None:
         """Tire au sort l'apparition du mega selon le mode."""
-        if random.random() >= mega_pacgum.spawn_chance_for(self.mode):
+        if random.random() >= self.mega_spawn_chance:
             return
         # Le place sur une case de pacgum au hasard (donc atteignable).
         if self.pacgums:
@@ -197,7 +199,7 @@ class GameSession:
         return False
 
     def _score_mult(self) -> float:
-        return mega_pacgum.SCORE_MULTIPLIER if self.mega_active else 1.0
+        return self.mega_score_multiplier if self.mega_active else 1.0
 
     # --- Collision ---------------------------------------------------------
 
@@ -304,7 +306,7 @@ class GameSession:
                     self.ghost_next_dir = (0, 0)
 
     def set_player_ghost(self, index: int) -> None:
-        """Designe le fantome pilote par J2(Versus). Change a chaque niveau"""
+        """Designe le fantome pilote par J2 (Versus). Change a chaque niveau."""
         for gi, g in enumerate(self.ghosts):
             g.is_player = (gi == index)
         if 0 <= index < len(self.ghosts):
