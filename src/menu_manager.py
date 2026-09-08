@@ -59,7 +59,10 @@ class MenuManager:
 
     # --- Listes de menu ----------------------------------------------------
 
-    def _draw_list(self, title: str, options: List[str], selected: int) -> None:
+    def _draw_list(self,
+                   title: str,
+                   options: List[str],
+                   selected: int) -> None:
         self.mlx.mlx_string_put(
             self.mlx_ptr, self.win_ptr, center_x_str(title),
             int(HEIGHT / 4), int(Color.GREEN), title,

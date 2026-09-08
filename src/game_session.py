@@ -113,7 +113,8 @@ class GameSession:
         start = (self.pacman.x, self.pacman.y)
         for y in range(self.maze.rows):
             for x in range(self.maze.cols):
-                if self._is_open(x, y) and (x, y) != start and random.random() < 0.80:
+                if self._is_open(x, y) \
+                        and (x, y) != start and random.random() < 0.80:
                     gums.add((x, y))
         return gums
 
@@ -306,7 +307,7 @@ class GameSession:
                     self.ghost_next_dir = (0, 0)
 
     def set_player_ghost(self, index: int) -> None:
-        """Designe le fantome pilote par J2 (Versus). Change a chaque niveau."""
+        """Designe le fantome pilote par J2(Versus). Change a chaque niveau"""
         for gi, g in enumerate(self.ghosts):
             g.is_player = (gi == index)
         if 0 <= index < len(self.ghosts):

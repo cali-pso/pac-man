@@ -14,7 +14,6 @@ from src.game_session import GameSession
 from src.highscore import HighscoreStore
 from src.mode_shadow import ShadowMode
 from src import mode_hardcore
-from src import mega_pacgum
 from src.utils import GameState, Key, center_x_str
 from src import mode_2players
 
@@ -27,7 +26,8 @@ BACKSPACE: int = 65288
 
 
 class App:
-    def __init__(self, width: int, height: int, title: str, config_filename: str) -> None:
+    def __init__(self, width: int,
+                 height: int, title: str, config_filename: str) -> None:
         self.width = width
         self.height = height
         self.mlx = Mlx()
@@ -243,7 +243,8 @@ class App:
             return
 
         now = time.time()
-        pac_prog = max(0.0, min(1.0, (now - self._last_step) / self._pac_speed))
+        pac_prog = max(0.0, min(1.0,
+                                (now - self._last_step) / self._pac_speed))
         ghost_prog = max(
             0.0, min(1.0, (now - self._last_ghost) / self._ghost_speed)
         )
@@ -405,7 +406,7 @@ class App:
         if self.session is None:
             return
         if self._current_mode == "Versus":
-            gd = mode_2players.player_dir(keycode, 2)  # J2 = fleches -> fantome
+            gd = mode_2players.player_dir(keycode, 2)  # J2=fleches->fantome
             if gd is not None:
                 self.session.set_ghost_direction(*gd)
                 return
@@ -492,7 +493,8 @@ class App:
         s = self.session
         if s is None or self._finished():
             return
-        pac_prog = max(0.0, min(1.0, (now - self._last_step) / self._pac_speed))
+        pac_prog = max(0.0,
+                       min(1.0, (now - self._last_step) / self._pac_speed))
         ghost_prog = max(
             0.0, min(1.0, (now - self._last_ghost) / self._ghost_speed)
         )
