@@ -130,7 +130,9 @@ class Ghost(Entity):
 
         if target is not None and random.random() > GHOST_RANDOMNESS:
             tx, ty = target
-            key = lambda d: abs(self.x + d[0] - tx) + abs(self.y + d[1] - ty)
+
+            def key(d: Tuple[int, int]) -> int:
+                return abs(self.x + d[0] - tx) + abs(self.y + d[1] - ty)
             # Comestible -> fuit (max distance) ; sinon -> poursuit (min)
             if self.state == EntityState.POWERED:
                 choice = max(free, key=key)

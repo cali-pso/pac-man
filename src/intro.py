@@ -1,13 +1,8 @@
-"""Cinematique d'intro ASCII : quelques slides d'histoire qui defilent automatiquement.
-N'importe quelle touche saute vers le menu. A placer dans src/intro.py
-"""
-
-from __future__ import annotations
 import time
 from typing import Any, List, Tuple
 
 from mlx import Mlx
-from src.utils import WIDTH, HEIGHT, center_x_str
+from src.utils import HEIGHT, center_x_str
 
 # Couleurs correctes au format 0xRRGGBB
 C_YELLOW: int = 0xFFFF00
@@ -140,7 +135,6 @@ class IntroScene:
 
         for kind, data, color, line_h in slide:
             if kind == "art":
-                # Find the longest line in the ASCII art to center the block uniformly
                 longest_line = max(data, key=len)
                 block_x = max(10, center_x_str(longest_line))
                 for s in data:

@@ -59,7 +59,8 @@ class MenuManager:
 
     # --- Listes de menu ----------------------------------------------------
 
-    def _draw_list(self, title: str, options: List[str], selected: int) -> None:
+    def _draw_list(
+            self, title: str, options: List[str], selected: int) -> None:
         self.mlx.mlx_string_put(
             self.mlx_ptr, self.win_ptr, center_x_str(title),
             int(HEIGHT / 4), int(Color.GREEN), title,
@@ -190,10 +191,10 @@ class MenuManager:
 
     def handle_key(self, keycode: int, state: GameState) -> None:
         if state == GameState.MAIN_MENU:
-            if keycode in (Key.UP, Key.W):
+            if keycode in (Key.UP, Key.Wb):
                 self.selected_index = (self.selected_index - 1) % len(
                     self.main_options)
-            elif keycode in (Key.DOWN, Key.S):
+            elif keycode in (Key.DOWN, Key.Sb):
                 self.selected_index = (self.selected_index + 1) % len(
                     self.main_options)
             elif keycode in (Key.ENTER, Key.SPACE):
@@ -208,9 +209,9 @@ class MenuManager:
                 self._handle_mode_menu(keycode)
 
         elif state == GameState.MENU_HIGHSCORES:
-            if keycode in (Key.LEFT, Key.A):
+            if keycode in (Key.LEFT, Key.Ab):
                 self.hs_index = (self.hs_index - 1) % len(PAGES)
-            elif keycode in (Key.RIGHT, Key.D):
+            elif keycode in (Key.RIGHT, Key.Db):
                 self.hs_index = (self.hs_index + 1) % len(PAGES)
             elif keycode == Key.ESC:
                 self.state = GameState.MAIN_MENU
@@ -223,10 +224,10 @@ class MenuManager:
         self.render()
 
     def _handle_mode_menu(self, keycode: int) -> None:
-        if keycode in (Key.UP, Key.W):
+        if keycode in (Key.UP, Key.Wb):
             self.selected_index = (self.selected_index - 1) % len(
                 self.mode_options)
-        elif keycode in (Key.DOWN, Key.S):
+        elif keycode in (Key.DOWN, Key.Sb):
             self.selected_index = (self.selected_index + 1) % len(
                 self.mode_options)
         elif keycode in (Key.ENTER, Key.SPACE):
@@ -235,9 +236,9 @@ class MenuManager:
             self.state = GameState.MAIN_MENU
 
     def _handle_2p_submenu(self, keycode: int) -> None:
-        if keycode in (Key.UP, Key.W):
+        if keycode in (Key.UP, Key.Wb):
             self.sub2p_index = (self.sub2p_index - 1) % len(self.sub2p_options)
-        elif keycode in (Key.DOWN, Key.S):
+        elif keycode in (Key.DOWN, Key.Sb):
             self.sub2p_index = (self.sub2p_index + 1) % len(self.sub2p_options)
         elif keycode in (Key.ENTER, Key.SPACE):
             self.chosen_mode = self.sub2p_options[self.sub2p_index]

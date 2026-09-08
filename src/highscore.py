@@ -1,14 +1,3 @@
-"""Highscores persistants par mode (un seul fichier JSON).
-Robuste aux erreurs de fichier. Contraintes du sujet : top 10 par mode,
-noms <= 10 caracteres (alphanumeriques + espaces), scores entiers >= 0.
-
-Format disque : { "Normal": [["Seb", 1200], ...], "Hardcore": [...], ... }
-
-A placer dans src/highscore.py
-"""
-
-from __future__ import annotations
-
 import json
 import os
 from typing import Dict, List, Tuple

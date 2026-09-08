@@ -131,8 +131,8 @@ class MazeRenderer:
                 src_idx = src_y * sl_o + src_x * bpp
                 dst_idx = y * sl_n + x * bpp
 
-                new_bytes[dst_idx : dst_idx + bpp] = orig_bytes[
-                    src_idx : src_idx + bpp
+                new_bytes[dst_idx: dst_idx + bpp] = orig_bytes[
+                    src_idx: src_idx + bpp
                 ]
 
         # Assign the calculated bytes to the new image buffer
@@ -181,7 +181,7 @@ class MazeRenderer:
             if x1 <= x0:
                 return
             base = y * size_line + x0 * bpp_bytes
-            buf[base : base + (x1 - x0) * bpp_bytes] = wall_b * (x1 - x0)
+            buf[base: base + (x1 - x0) * bpp_bytes] = wall_b * (x1 - x0)
 
         def vline(x: int, y0: int, y1: int) -> None:
             if x < 0 or x >= iw:
@@ -190,7 +190,7 @@ class MazeRenderer:
             y1 = min(ih, y1)
             for yy in range(y0, y1):
                 off = yy * size_line + x * bpp_bytes
-                buf[off : off + bpp_bytes] = wall_b
+                buf[off: off + bpp_bytes] = wall_b
 
         def hband(x0: int, x1: int, y: int) -> None:
             for t in range(THICK):
@@ -292,7 +292,7 @@ class MazeRenderer:
             if x1 < x0:
                 continue
             base = yy * sl + x0 * bb
-            work[base : base + (x1 - x0 + 1) * bb] = color * (x1 - x0 + 1)
+            work[base: base + (x1 - x0 + 1) * bb] = color * (x1 - x0 + 1)
 
     def _fill_dot(
         self, work: bytearray, cx: int, cy: int, r: int, color: bytes
@@ -309,7 +309,7 @@ class MazeRenderer:
             if x1 < x0:
                 continue
             base = yy * sl + x0 * bb
-            work[base : base + (x1 - x0 + 1) * bb] = color * (x1 - x0 + 1)
+            work[base: base + (x1 - x0 + 1) * bb] = color * (x1 - x0 + 1)
 
     def _draw_walls(self, work: bytearray, visible) -> None:
         """Dessine les murs dans work. visible(x, y) filtre par cellule
@@ -329,7 +329,7 @@ class MazeRenderer:
                 yy = y + t
                 if 0 <= yy < ih and x1 > x0:
                     base = yy * sl + x0 * bb
-                    work[base : base + (x1 - x0) * bb] = wb * (x1 - x0)
+                    work[base: base + (x1 - x0) * bb] = wb * (x1 - x0)
 
         def vband(x, y0, y1):
             y0 = max(0, y0)
@@ -339,7 +339,7 @@ class MazeRenderer:
                 if 0 <= xx < iw:
                     for yy in range(y0, y1):
                         off = yy * sl + xx * bb
-                        work[off : off + bb] = wb
+                        work[off: off + bb] = wb
 
         for y in range(maze.rows):
             for x in range(maze.cols):
@@ -506,13 +506,13 @@ class MazeRenderer:
                 gi = getattr(session, "player_ghost_index", None)
                 if gi is not None:
                     if gi == 0:
-                        segs.append(f"J2 ghost Blinky")
+                        segs.append("J2 ghost Blinky")
                     elif gi == 1:
-                        segs.append(f"J2 ghost Pinky")
+                        segs.append("J2 ghost Pinky")
                     elif gi == 2:
-                        segs.append(f"J2 ghost Inky")
+                        segs.append("J2 ghost Inky")
                     elif gi == 3:
-                        segs.append(f"J2 ghost Clyde")
+                        segs.append("J2 ghost Clyde")
             if getattr(session, "mega_active", False):
                 segs.append("MEGA!")
             if session.powered:
@@ -521,9 +521,9 @@ class MazeRenderer:
                 segs.append(f"Light: {shadow.radius:.1f}")
                 segs.append(f"SHINE: {shadow.shine_time_left()}")
         if session.cheat:
-            segs.append(f"CHEATS: ON")
+            segs.append("CHEATS: ON")
         if session.invicible:
-            segs.append(f"GOD MODE: ON")
+            segs.append("GOD MODE: ON")
         # Retour a la ligne quand la barre depasse la largeur de la fenetre.
         sep = "   "
         max_chars = max(16, (self.screen_w - 20) // 9)

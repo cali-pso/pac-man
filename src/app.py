@@ -14,7 +14,6 @@ from src.game_session import GameSession
 from src.highscore import HighscoreStore
 from src.mode_shadow import ShadowMode
 from src import mode_hardcore
-from src import mega_pacgum
 from src.utils import GameState, Key, center_x_str
 from src import mode_2players
 
@@ -27,7 +26,8 @@ BACKSPACE: int = 65288
 
 
 class App:
-    def __init__(self, width: int, height: int, title: str, config_filename: str) -> None:
+    def __init__(self, width: int, height: int,
+                 title: str, config_filename: str) -> None:
         self.width = width
         self.height = height
         self.mlx = Mlx()
@@ -78,7 +78,7 @@ class App:
             Key.LEFT,
             Key.RIGHT,
             98,
-            Key.A,  # 'b' is 98, Key.A is 97
+            Key.Ab,  # 'b' is 98, Key.Ab is 97
         ]
         # Initialize the sliding window
         self.input_buffer = deque(maxlen=len(self.konami_sequence))
@@ -227,7 +227,8 @@ class App:
             return
 
         now = time.time()
-        pac_prog = max(0.0, min(1.0, (now - self._last_step) / self._pac_speed))
+        pac_prog = max(0.0, min(
+            1.0, (now - self._last_step) / self._pac_speed))
         ghost_prog = max(
             0.0, min(1.0, (now - self._last_ghost) / self._ghost_speed)
         )
@@ -294,13 +295,13 @@ class App:
 
     @staticmethod
     def _dir_for(keycode: int) -> Optional[Tuple[int, int]]:
-        if keycode in (Key.UP, Key.W):
+        if keycode in (Key.UP, Key.Wb):
             return (0, -1)
-        if keycode in (Key.DOWN, Key.S):
+        if keycode in (Key.DOWN, Key.Sb):
             return (0, 1)
-        if keycode in (Key.LEFT, Key.A):
+        if keycode in (Key.LEFT, Key.Ab):
             return (-1, 0)
-        if keycode in (Key.RIGHT, Key.D):
+        if keycode in (Key.RIGHT, Key.Db):
             return (1, 0)
         return None
 
@@ -377,14 +378,14 @@ class App:
         if keycode == Key.ESC:
             self._enter_pause()
             return
-        elif keycode == Key.I and self.session.cheat:
+        elif keycode == Key.Ib and self.session.cheat:
             self.session.invicible = not self.session.invicible
-        elif keycode == Key.N and self.session.cheat:
+        elif keycode == Key.Nb and self.session.cheat:
             self._skip_level()
         if self.session is None:
             return
         if self._current_mode == "Versus":
-            gd = mode_2players.player_dir(keycode, 2)  # J2 = fleches -> fantome
+            gd = mode_2players.player_dir(keycode, 2)  # J2 = fleches->fantome
             if gd is not None:
                 self.session.set_ghost_direction(*gd)
                 return
@@ -432,10 +433,10 @@ class App:
             pass
 
     def _handle_pause_key(self, keycode: int) -> None:
-        if keycode in (Key.UP, Key.W):
+        if keycode in (Key.UP, Key.Wb):
             self._pause_index = (self._pause_index - 1) % len(PAUSE_OPTIONS)
             self._render_pause()
-        elif keycode in (Key.DOWN, Key.S):
+        elif keycode in (Key.DOWN, Key.Sb):
             self._pause_index = (self._pause_index + 1) % len(PAUSE_OPTIONS)
             self._render_pause()
         elif keycode in (Key.ENTER, Key.SPACE):
@@ -471,7 +472,8 @@ class App:
         s = self.session
         if s is None or self._finished():
             return
-        pac_prog = max(0.0, min(1.0, (now - self._last_step) / self._pac_speed))
+        pac_prog = max(0.0, min(
+            1.0, (now - self._last_step) / self._pac_speed))
         ghost_prog = max(
             0.0, min(1.0, (now - self._last_ghost) / self._ghost_speed)
         )

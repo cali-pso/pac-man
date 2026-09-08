@@ -24,7 +24,7 @@ SWITCH_MAX: float = 15.0
 
 # Jeux de touches par joueur (keycode -> direction)
 P1_KEYS = {
-    Key.W: (0, -1), Key.S: (0, 1), Key.A: (-1, 0), Key.D: (1, 0),
+    Key.Wb: (0, -1), Key.Sb: (0, 1), Key.Ab: (-1, 0), Key.Db: (1, 0),
 }
 P2_KEYS = {
     Key.UP: (0, -1), Key.DOWN: (0, 1), Key.LEFT: (-1, 0), Key.RIGHT: (1, 0),
@@ -32,7 +32,7 @@ P2_KEYS = {
 
 # Coop : J1 (WASD) -> uniquement vertical ; J2 (fleches) -> horizontal
 COOP_KEYS = {
-    Key.W: (0, -1), Key.S: (0, 1), Key.LEFT: (-1, 0), Key.RIGHT: (1, 0),
+    Key.Wb: (0, -1), Key.Sb: (0, 1), Key.LEFT: (-1, 0), Key.RIGHT: (1, 0),
 }
 
 

@@ -2,8 +2,8 @@ from enum import Enum, IntEnum, auto
 from typing import Any
 
 
-WIDTH: int = 1200
-HEIGHT: int = 800
+WIDTH: int = 1500
+HEIGHT: int = 1500
 
 
 class GameState(Enum):
@@ -36,12 +36,12 @@ class Key(IntEnum):
     DOWN = 65364
     LEFT = 65361
     RIGHT = 65363
-    W = 119
-    A = 97
-    S = 115
-    D = 100
-    N = 110
-    I = 105
+    Wb = 119
+    Ab = 97
+    Sb = 115
+    Db = 100
+    Nb = 110
+    Ib = 105
 
 
 def quit(mlx, mlx_ptr: Any) -> int:
