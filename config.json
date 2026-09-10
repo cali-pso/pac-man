@@ -77,6 +77,7 @@
 		"power_duration": 8.0,
 		"ghost_respawn_delay": 4.0,
 		"mega_spawn_chance": 0.01,
+		"max_level_time": 180,
 		"mega_score_multiplier": 1.5
 	},
 	"2_player_mode": {

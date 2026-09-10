@@ -14,8 +14,10 @@ from src.game_session import GameSession
 from src.highscore import HighscoreStore
 from src.mode_shadow import ShadowMode
 from src import mode_hardcore
+from src import mega_pacgum
 from src.utils import GameState, Key, center_x_str
 from src import mode_2players
+from src import mode_roguelite
 
 GHOST_INTERVAL: float = 0.38  # cadence des fantomes
 HOLD_GRACE: float = 0.15  # delai sans repetition avant de considerer relache
@@ -26,8 +28,7 @@ BACKSPACE: int = 65288
 
 
 class App:
-    def __init__(self, width: int,
-                 height: int, title: str, config_filename: str) -> None:
+    def __init__(self, width: int, height: int, title: str, config_filename: str) -> None:
         self.width = width
         self.height = height
         self.mlx = Mlx()
@@ -68,7 +69,18 @@ class App:
         self._last_step: float = 0.0
         self._ghost_speed: float = GHOST_INTERVAL
         self._pac_speed: float = STEP_INTERVAL
+        self._base_ghost_speed: float = GHOST_INTERVAL
+        self._base_pac_speed: float = STEP_INTERVAL
         self._last_frame: float = 0.0
+        # Roguelite
+        self._run = None
+        self._roguelite = None
+        self._choosing: bool = False
+        self._choices: list = []
+        self._choice_index: int = 0
+        self._temp_msg: str = ""
+        self._temp_msg_until: float = 0.0
+        self._temp_msg_color: int = 0xFFFFFF
         self._pause_index: int = 0
         self.konami_sequence = [
             Key.UP,
@@ -117,6 +129,8 @@ class App:
             ruleset = self.rulesets[self._ruleset_key(mode)]
             self._ghost_speed = ruleset.ghost_speed
             self._pac_speed = ruleset.pac_speed
+            self._base_ghost_speed = ruleset.ghost_speed
+            self._base_pac_speed = ruleset.pac_speed
             maze = self.maze_loader.load(
                 (ruleset.width, ruleset.height), ruleset.seed
             )
@@ -127,6 +141,8 @@ class App:
             self.session.mode = self._current_mode
             self._attach_mode()
             self._init_random()
+            self._init_roguelite(ruleset)
+            self._apply_run(self.session)
             if self.session.mega_pos is not None:
                 self.audio.play_sound("mega_alert.wav")
             self._finish_handled = False
@@ -185,10 +201,14 @@ class App:
         ruleset = self.rulesets[self._ruleset_key(self._current_mode)]
         self._ghost_speed = ruleset.ghost_speed
         self._pac_speed = ruleset.pac_speed
+        self._base_ghost_speed = ruleset.ghost_speed
+        self._base_pac_speed = ruleset.pac_speed
         seed = random.randint(1, 2_000_000_000)  # niveaux 2+ : aleatoire
         maze = self.maze_loader.load((ruleset.width, ruleset.height), seed)
         kw = self._session_kwargs(ruleset)
         kw["lives"] = self.session.lives  # on garde les vies
+        if self._run is not None:
+            kw["lives"] = self._run.lives  # roguelite : vies de la run
         kw["start_score"] = self.session.score  # on garde le score
         cheat = self.session.cheat
         self.session = GameSession(maze, **kw)
@@ -197,6 +217,10 @@ class App:
         self.session.mode = self._current_mode
         self._attach_mode()
         self._init_random()
+        self._apply_run(self.session)
+        self._finish_handled = False
+        self._entering_name = False
+        self._name_buffer = ""
         if self.session.mega_pos is not None:
             self.audio.play_sound("mega_alert.wav")
         self.maze_renderer.prepare(maze)
@@ -205,10 +229,13 @@ class App:
 
     def _progress(self) -> None:
         s = self.session
-        if s is None:
+        if s is None or self._choosing:
             return
         if s.won and self._level < self._total_levels:
-            self._next_level()
+            if self._current_mode == "Roguelite":
+                self._enter_choice()
+            else:
+                self._next_level()
             return
         if s.won or s.game_over:
             self._on_finish()
@@ -236,6 +263,9 @@ class App:
         )
 
     def _render_game(self) -> None:
+        if self._choosing:
+            self._render_choice()
+            return
         if self.session is None:
             return
         if self.session.won or self.session.game_over:
@@ -243,13 +273,18 @@ class App:
             return
 
         now = time.time()
-        pac_prog = max(0.0, min(1.0,
-                                (now - self._last_step) / self._pac_speed))
+        pac_prog = max(0.0, min(1.0, (now - self._last_step) / self._pac_speed))
         ghost_prog = max(
             0.0, min(1.0, (now - self._last_ghost) / self._ghost_speed)
         )
 
         self.maze_renderer.render(self.session, pac_prog, ghost_prog)
+        if time.time() < self._temp_msg_until:
+            self._put_center(self._temp_msg, 54, self._temp_msg_color)
+            try:
+                self.mlx.mlx_do_sync(self.mlx_ptr)
+            except Exception:
+                pass
 
     def _render_finish(self) -> None:
         self.mlx.mlx_clear_window(self.mlx_ptr, self.win_ptr)
@@ -357,6 +392,17 @@ class App:
                 self.audio.play_music("super_active.wav")
                 if self.shadow is not None:
                     self.shadow.on_shine()
+                if self._current_mode == "Roguelite":
+                    eff = mode_roguelite.random_temp_effect()
+                    self._apply_temp_effect(eff["spec"])
+                    is_bonus = eff["kind"] == "bonus"
+                    self.audio.play_sound(
+                        "roguelite_bonus.wav" if is_bonus
+                        else "roguelite_malus.wav")
+                    tag = "BONUS" if is_bonus else "MALUS"
+                    self._temp_msg = f"{tag}: {eff['label']}"
+                    self._temp_msg_color = 0x00DD00 if is_bonus else 0xFF6600
+                    self._temp_msg_until = time.time() + 2.5
             else:
                 self.audio.play_sound("move.wav")  # deplacement sans manger
             self._progress()
@@ -381,7 +427,113 @@ class App:
                 self._name_buffer += ch
                 self._render_finish()
 
+    def _init_roguelite(self, ruleset: object) -> None:
+        if self._current_mode == "Roguelite":
+            self._run = mode_roguelite.RunState(ruleset.lives)
+            self._roguelite = mode_roguelite.RogueliteEngine()
+        else:
+            self._run = None
+            self._roguelite = None
+        self._choosing = False
+        self._choices = []
+        self._choice_index = 0
+
+    def _apply_run(self, session: object) -> None:
+        run = self._run
+        if run is None or session is None:
+            return
+        self._pac_speed = self._base_pac_speed * run.pac_speed_factor
+        self._ghost_speed = self._base_ghost_speed * run.ghost_speed_factor
+        session.power_duration *= run.power_duration_factor
+        session.run_score_multiplier = run.score_multiplier
+        session.magnet_range = run.magnet_range
+        session.shield_count = run.shields
+        session.max_time = max(10, session.max_time + run.time_bonus)
+        session.set_start_freeze(run.next_freeze_ghosts, run.next_freeze_pac)
+        run.next_freeze_ghosts = 0.0
+        run.next_freeze_pac = 0.0
+
+    def _apply_temp_effect(self, spec: dict) -> None:
+        """Applique un effet directement sur la partie en cours (super-pacgum
+        roguelite). Non memorise dans la run -> disparait au niveau suivant."""
+        s = self.session
+        if s is None:
+            return
+        field, op, val = spec["field"], spec["op"], spec["value"]
+        if field == "pac_speed_factor" and op == "mul":
+            self._pac_speed *= val
+        elif field == "ghost_speed_factor" and op == "mul":
+            self._ghost_speed *= val
+        elif field == "lives":
+            s.lives = max(1, s.lives + val)
+        elif field == "power_duration_factor" and op == "mul":
+            s.power_duration *= val
+        elif field == "score_multiplier" and op == "mul":
+            s.run_score_multiplier *= val
+        elif field == "magnet_range":
+            s.magnet_range = max(0, s.magnet_range + val)
+        elif field == "shields":
+            s.shield_count = max(0, s.shield_count + val)
+        elif field == "time_bonus":
+            s.max_time = max(10, s.max_time + val)
+        elif field == "next_freeze_ghosts":
+            s.set_start_freeze(val, 0)
+        elif field == "next_freeze_pac":
+            s.set_start_freeze(0, val)
+
+    def _enter_choice(self) -> None:
+        if self._run is None or self._roguelite is None:
+            self._next_level()
+            return
+        self._run.lives = self.session.lives
+        self._run.shields = self.session.shield_count
+        self._choices = self._roguelite.draw(self._run)
+        self._choice_index = 0
+        self._choosing = True
+        self._reset_move()
+        self._render_choice()
+
+    def _render_choice(self) -> None:
+        self.mlx.mlx_clear_window(self.mlx_ptr, self.win_ptr)
+        cy = self.height // 2
+        self._put_center("LEVEL CLEARED - CHOOSE A CARD", cy - 90, 0xFFFF00)
+        for i, ch in enumerate(self._choices):
+            selected = (i == self._choice_index)
+            prefix = "> " if selected else "  "
+            if ch.get("hidden"):
+                color = 0xFFFFFF if selected else 0xAAAAAA
+                text = prefix + "[ ??? ]  ???"
+            else:
+                if ch["kind"] == "bonus":
+                    base, tag = 0x00DD00, "[BONUS] "
+                else:
+                    base, tag = 0xFF4444, "[MALUS] "
+                color = 0xFFFFFF if selected else base
+                text = prefix + tag + ch["label"]
+            self._put_center(text, cy - 40 + i * 30, color)
+        self._put_center("Up/Down + ENTER to choose", cy + 90, 0x888888)
+        try:
+            self.mlx.mlx_do_sync(self.mlx_ptr)
+        except Exception:
+            pass
+
+    def _handle_choice_key(self, keycode: int) -> None:
+        if keycode in (Key.UP, Key.Wb):
+            self._choice_index = (self._choice_index - 1) % len(self._choices)
+            self._render_choice()
+        elif keycode in (Key.DOWN, Key.Sb):
+            self._choice_index = (self._choice_index + 1) % len(self._choices)
+            self._render_choice()
+        elif keycode in (Key.ENTER, Key.SPACE):
+            self._roguelite.apply(self._run,
+                                  self._choices[self._choice_index])
+            self._choosing = False
+            self._next_level()
+
     def _handle_play_key(self, keycode: int) -> None:
+        if self._choosing:
+            self._handle_choice_key(keycode)
+            return
         self.input_buffer.append(keycode)
 
         if list(self.input_buffer) == self.konami_sequence:
@@ -406,7 +558,7 @@ class App:
         if self.session is None:
             return
         if self._current_mode == "Versus":
-            gd = mode_2players.player_dir(keycode, 2)  # J2=fleches->fantome
+            gd = mode_2players.player_dir(keycode, 2)  # J2 = fleches -> fantome
             if gd is not None:
                 self.session.set_ghost_direction(*gd)
                 return
@@ -448,6 +600,11 @@ class App:
         self._put_center(
             "Up/Down + ENTER  -  ESC to resume", cy + 70, 0x888888
         )
+        # Roguelite : effets actifs de la run
+        if self._current_mode == "Roguelite" and self._run is not None:
+            self._put_center("--- Active effects ---", cy + 110, 0x00FFFF)
+            for i, line in enumerate(self._run.summary()):
+                self._put_center(line, cy + 134 + i * 20, 0xFFFFFF)
         try:
             self.mlx.mlx_do_sync(self.mlx_ptr)
         except Exception:
@@ -493,8 +650,7 @@ class App:
         s = self.session
         if s is None or self._finished():
             return
-        pac_prog = max(0.0,
-                       min(1.0, (now - self._last_step) / self._pac_speed))
+        pac_prog = max(0.0, min(1.0, (now - self._last_step) / self._pac_speed))
         ghost_prog = max(
             0.0, min(1.0, (now - self._last_ghost) / self._ghost_speed)
         )
@@ -547,7 +703,7 @@ class App:
             if now - self._last_frame >= FRAME_INTERVAL:
                 self._last_frame = now
                 self._resolve_visual_collisions(now)
-                if self._finished():
+                if self._finished() and not self._choosing:
                     self._on_finish()
                 self._render_game()
         return 0

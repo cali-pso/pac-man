@@ -17,6 +17,7 @@ ALL_WALLS = Maze.WALL_N | Maze.WALL_E | Maze.WALL_S | Maze.WALL_W  # 15
 GHOST_COLORS = [0xFF0000, 0xFFB8FF, 0x00FFFF, 0xFFB852]
 POWER_DURATION = 8.0  # secondes de comestibilite apres un super-pacgum
 GHOST_RESPAWN_DELAY = 4.0  # secondes avant qu'un fantome mange revienne
+SHIELD_INVINCIBLE_DURATION = 2.5  # invincibilite apres un bouclier
 
 
 class GameSession:
@@ -70,6 +71,14 @@ class GameSession:
         self.ghost_dir: Tuple[int, int] = (0, 0)
         self.ghost_next_dir: Tuple[int, int] = (0, 0)
 
+        # Roguelite (effets sur la partie)
+        self.run_score_multiplier = 1.0
+        self.shield_count = 0
+        self.magnet_range = 0
+        self.ghosts_frozen_until = 0.0
+        self.pac_frozen_until = 0.0
+        self.invincible_until = 0.0
+
         sx, sy = self._find_spawn()
         self.pacman = PacMan(sx, sy)
         self.pacgums: Set[Tuple[int, int]] = self._seed_pacgums()
@@ -113,8 +122,7 @@ class GameSession:
         start = (self.pacman.x, self.pacman.y)
         for y in range(self.maze.rows):
             for x in range(self.maze.cols):
-                if self._is_open(x, y) \
-                        and (x, y) != start and random.random() < 0.80:
+                if self._is_open(x, y) and (x, y) != start and random.random() < 0.80:
                     gums.add((x, y))
         return gums
 
@@ -150,6 +158,13 @@ class GameSession:
         for g in self.ghosts:
             g.dead_until += delta
         self._paused_at = 0.0
+
+    def set_start_freeze(self, ghosts_sec: float, pac_sec: float) -> None:
+        now = time.time()
+        if ghosts_sec > 0:
+            self.ghosts_frozen_until = now + ghosts_sec
+        if pac_sec > 0:
+            self.pac_frozen_until = now + pac_sec
 
     def _maybe_spawn_mega(self) -> None:
         """Tire au sort l'apparition du mega selon le mode."""
@@ -200,7 +215,8 @@ class GameSession:
         return False
 
     def _score_mult(self) -> float:
-        return self.mega_score_multiplier if self.mega_active else 1.0
+        mega = self.mega_score_multiplier if self.mega_active else 1.0
+        return mega * self.run_score_multiplier
 
     # --- Collision ---------------------------------------------------------
 
@@ -210,6 +226,8 @@ class GameSession:
         coller a ce que le joueur voit. Retourne True si Pac-Man est mort."""
         if self.won or self.game_over or self.invicible:
             return False
+        if time.time() < self.invincible_until:
+            return False  # bouclier actif : Pac-Man traverse les fantomes
         for g in self.ghosts:
             if g.state == EntityState.DEAD:
                 continue
@@ -248,7 +266,16 @@ class GameSession:
             g.can_move = False  # figes
             g.dir_x, g.dir_y = 0, 0
 
+    def is_invincible(self) -> bool:
+        return time.time() < self.invincible_until
+
     def _hit(self) -> None:
+        if self.shield_count > 0:
+            self.shield_count -= 1
+            self.invincible_until = (
+                time.time() + SHIELD_INVINCIBLE_DURATION
+            )
+            return  # invincible un moment, pas de retour au depart
         self.lives -= 1
         if self.lives <= 0:
             self.lives = 0
@@ -269,6 +296,8 @@ class GameSession:
         self.last_ate_mega = False
         if self.won or self.game_over:
             return False
+        if time.time() < self.pac_frozen_until:
+            return False  # gel de Pac-Man (roguelite)
         moved = self.pacman.try_move(
             dx, dy, self.maze.cells, self.maze.rows, self.maze.cols
         )
@@ -287,6 +316,13 @@ class GameSession:
             self.score += int(self.points_per_super_pacgum * mult)
             self.last_ate_super = True
             self._enter_power()
+        if self.magnet_range > 0:
+            px, py = self.pacman.x, self.pacman.y
+            for (gx, gy) in list(self.pacgums):
+                if max(abs(gx - px), abs(gy - py)) <= self.magnet_range:
+                    self.pacgums.discard((gx, gy))
+                    self.score += int(self.points_per_pacgum * mult)
+                    self.last_ate = True
         if not self.pacgums and not self.super_pacgums:
             self.won = True
         return True
@@ -307,7 +343,7 @@ class GameSession:
                     self.ghost_next_dir = (0, 0)
 
     def set_player_ghost(self, index: int) -> None:
-        """Designe le fantome pilote par J2(Versus). Change a chaque niveau"""
+        """Designe le fantome pilote par J2 (Versus). Change a chaque niveau."""
         for gi, g in enumerate(self.ghosts):
             g.is_player = (gi == index)
         if 0 <= index < len(self.ghosts):
@@ -335,6 +371,8 @@ class GameSession:
     def update_ghosts(self) -> None:
         if self.won or self.game_over:
             return
+        if time.time() < self.ghosts_frozen_until:
+            return  # gel des fantomes (roguelite)
         self._respawn_dead()
         target = (self.pacman.x, self.pacman.y)
         for i, g in enumerate(self.ghosts):
