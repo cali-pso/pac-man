@@ -1,17 +1,3 @@
-"""Mode 2 JOUEURS : trois sous-modes traites comme des modes a part entiere.
-  - Coop   : meme Pac-Man. J1 (WASD) controle haut/bas, J2 (fleches) g/d.
-  - Random : meme Pac-Man. Le controle bascule entre J1 et J2 (aleatoire).
-  - Versus : J1 = Pac-Man, J2 = un fantome (a venir).
-
-Clavier uniquement. J1 = WASD, J2 = fleches.
-
->>> REGLAGES A MODIFIER ICI <<<
-
-A placer dans src/mode_2players.py
-"""
-
-from __future__ import annotations
-
 from src.utils import Key
 
 # Sous-modes disponibles dans le sous-menu (Versus ajoute plus tard)

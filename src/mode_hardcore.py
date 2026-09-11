@@ -1,9 +1,3 @@
-"""Mode HARDCORE (preset). Les valeurs par defaut ci-dessous servent de
-repli ; en jeu elles viennent de config.json (section hardcore_mode) via
-le HardcoreRuleSet.
-"""
-
-# Valeurs de repli (si absentes de la config).
 HARDCORE_LIVES: int = 1
 TIME_FACTOR: float = 0.5
 NO_SUPER_PACGUMS: bool = True

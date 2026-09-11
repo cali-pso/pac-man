@@ -1,12 +1,6 @@
-"""Mode SHADOW : zone lumineuse autour de Pac-Man. Les valeurs par defaut
-ci-dessous servent de repli ; en jeu, elles sont fournies par config.json
-(section shadow_mode) via le ShadowRuleSet.
-"""
-
 import math
 import time
 
-# Valeurs de repli (utilisees seulement si non fournies par la config).
 LIGHT_RADIUS_START: float = 3.5
 LIGHT_RADIUS_MIN: float = 2.0
 LIGHT_RADIUS_MAX: float = 8.0

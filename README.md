@@ -17,6 +17,56 @@ The player clears each level by eating all the pacgums while avoiding the ghosts
 progresses through multiple levels (score and lives are carried over), and can
 compete for the top-10 scoreboard of each mode.
 
+### Game modes
+
+**Normal** — The faithful base game. Clear each level by eating every pacgum
+while avoiding the four ghosts; a super-pacgum in each corner makes ghosts
+edible for a short time. The HUD shows only the level, score, lives and timer.
+
+**Hardcore** — A hard preset: a single life, level
+time reduced by a factor, and no super-pacgums (ghosts are a permanent threat,
+and pacgums are the only source of points). The scoring is the same as other
+modes — the difficulty is reflected by its own leaderboard, not by inflated
+points.
+
+**Shadow** — The corridors are dark: only a circular **light zone** around
+Pac-Man reveals the pacgums, super-pacgums, ghosts and walls. The radius
+**grows** with every pacgum eaten and **shrinks** over time. Eating a
+super-pacgum triggers a **shine bright** that lights up the whole map for a few
+seconds. All shadow parameters are configurable.
+
+**Roguelite** — After each cleared level, a screen offers **3 cards**
+(bonus/malus), one of which is a **mystery card (`???`)**. The draw is
+**anti-streak**: picking a bonus makes bonuses rarer next time, and vice versa.
+Effects **accumulate over the run**: Pac-Man/ghost speed, extra lives, a shield
+(absorbs a hit by granting a few seconds of invincibility during which Pac-Man
+passes through ghosts), a pacgum **magnet**, super-pacgum duration, per-level
+time, a permanent reveal/hide of the mystery card, a start-of-level freeze, and
+a score multiplier. In this mode, each super-pacgum also grants a **temporary**
+bonus/malus for the current level, announced on screen. The pause menu (ESC)
+lists all active effects.
+
+**2 Players** — A sub-menu offers three sub-modes, each with its own
+leaderboard. Player 1 uses **WASD**, Player 2 uses the **arrow keys**.
+
+- **Versus** — P1 controls Pac-Man, P2 controls one ghost (which changes every
+  level); the other three are AI. P2 wins when Pac-Man runs out of lives; P1
+  wins by completing the levels.
+- **Coop** — One shared Pac-Man: P1 controls the vertical axis, P2 the
+  horizontal axis.
+- **Random** — One shared Pac-Man, with control switching randomly between P1
+  and P2 (the HUD shows who is currently playing).
+
+### Special items
+
+- **Pacgum** — base points; clearing them all ends the level.
+- **Super-pacgum** — makes ghosts edible for a short time (they flee and score
+  points if eaten).
+- **Mega-pacgum** — a **rare** spawn (configurable), in every mode **except
+  Normal**. Until the end of the level it freezes the timer, freezes and makes
+  the ghosts edible (eaten ones do not respawn), lights up the whole map, speeds
+  Pac-Man up and multiplies the score. A warning sound announces its presence.
+
 ## Instructions
 
 ### Requirements
