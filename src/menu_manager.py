@@ -70,9 +70,14 @@ class MenuManager:
         self, title: str, options: List[str], selected: int
     ) -> None:
         """Draw a centered title and a vertical list with a cursor."""
+
         self.mlx.mlx_string_put(
-            self.mlx_ptr, self.win_ptr, center_x_str(title),
-            int(HEIGHT / 4), int(Color.GREEN), title,
+            self.mlx_ptr,
+            self.win_ptr,
+            center_x_str(title),
+            int(HEIGHT / 4),
+            int(Color.GREEN),
+            title,
         )
         start_y = int(HEIGHT / 3)
         spacing = 30
@@ -82,29 +87,39 @@ class MenuManager:
             prefix = "> " if selected_now else "  "
             text = f"{prefix}{option}"
             self.mlx.mlx_string_put(
-                self.mlx_ptr, self.win_ptr, center_x_str(text),
-                start_y + (i * spacing), color, text,
+                self.mlx_ptr,
+                self.win_ptr,
+                center_x_str(text),
+                start_y + (i * spacing),
+                color,
+                text,
             )
 
     def _draw_main_menu(self) -> None:
         """Draw the main menu."""
-        self._draw_list("=== PAC-MAN ===", self.main_options,
-                        self.selected_index)
+        self._draw_list(
+            "=== PAC-MAN ===", self.main_options, self.selected_index
+        )
 
     def _draw_mode_menu(self) -> None:
         """Draw the mode-selection menu."""
-        self._draw_list("=== CHOOSE MODE ===", self.mode_options,
-                        self.selected_index)
+        self._draw_list(
+            "=== CHOOSE MODE ===", self.mode_options, self.selected_index
+        )
 
     def _draw_2p_submenu(self) -> None:
         """Draw the two-player sub-menu."""
-        self._draw_list("=== 2 PLAYERS ===", self.sub2p_options,
-                        self.sub2p_index)
+        self._draw_list(
+            "=== 2 PLAYERS ===", self.sub2p_options, self.sub2p_index
+        )
         hint = "ESC to go back"
         self.mlx.mlx_string_put(
-            self.mlx_ptr, self.win_ptr, center_x_str(hint),
+            self.mlx_ptr,
+            self.win_ptr,
+            center_x_str(hint),
             int(HEIGHT / 3) + len(self.sub2p_options) * 30 + 20,
-            int(Color.GRAY), hint,
+            int(Color.GRAY),
+            hint,
         )
 
     # --- High scores (paged, side by side) ---------------------------------
@@ -117,22 +132,34 @@ class MenuManager:
     def _draw_table(self, mode: str, center_x: int, top_y: int) -> None:
         """Draw one high-score table centered around ``center_x``."""
         self.mlx.mlx_string_put(
-            self.mlx_ptr, self.win_ptr, self._center_at(mode, center_x),
-            top_y, int(Color.YELLOW), mode,
+            self.mlx_ptr,
+            self.win_ptr,
+            self._center_at(mode, center_x),
+            top_y,
+            int(Color.YELLOW),
+            mode,
         )
         entries = self.highscores.top(mode) if self.highscores else []
         if not entries:
             txt = "(empty)"
             self.mlx.mlx_string_put(
-                self.mlx_ptr, self.win_ptr, self._center_at(txt, center_x),
-                top_y + 26, int(Color.GRAY), txt,
+                self.mlx_ptr,
+                self.win_ptr,
+                self._center_at(txt, center_x),
+                top_y + 26,
+                int(Color.GRAY),
+                txt,
             )
             return
         for i, (name, score) in enumerate(entries, start=1):
             text = f"{i:>2}. {name} - {score}"
             self.mlx.mlx_string_put(
-                self.mlx_ptr, self.win_ptr, self._center_at(text, center_x),
-                top_y + i * 20, int(Color.WHITE), text,
+                self.mlx_ptr,
+                self.win_ptr,
+                self._center_at(text, center_x),
+                top_y + i * 20,
+                int(Color.WHITE),
+                text,
             )
 
     def _draw_highscores(self) -> None:
@@ -140,13 +167,21 @@ class MenuManager:
         page_title, modes = PAGES[self.hs_index]
         title = f"HIGHSCORES - {page_title}"
         self.mlx.mlx_string_put(
-            self.mlx_ptr, self.win_ptr, center_x_str(title),
-            int(HEIGHT / 6), int(Color.YELLOW), title,
+            self.mlx_ptr,
+            self.win_ptr,
+            center_x_str(title),
+            int(HEIGHT / 6),
+            int(Color.YELLOW),
+            title,
         )
         switch = "<  Left / Right : change page  >"
         self.mlx.mlx_string_put(
-            self.mlx_ptr, self.win_ptr, center_x_str(switch),
-            int(HEIGHT / 6) + 22, int(Color.GRAY), switch,
+            self.mlx_ptr,
+            self.win_ptr,
+            center_x_str(switch),
+            int(HEIGHT / 6) + 22,
+            int(Color.GRAY),
+            switch,
         )
         top_y = int(HEIGHT / 3)
         if len(modes) == 1:
@@ -157,16 +192,24 @@ class MenuManager:
                 self._draw_table(m, ci * col_w + col_w // 2, top_y)
         footer = "Press ESC to return to Menu"
         self.mlx.mlx_string_put(
-            self.mlx_ptr, self.win_ptr, center_x_str(footer),
-            HEIGHT - 30, int(Color.CYAN), footer,
+            self.mlx_ptr,
+            self.win_ptr,
+            center_x_str(footer),
+            HEIGHT - 30,
+            int(Color.CYAN),
+            footer,
         )
 
     def _draw_instructions(self) -> None:
         """Draw the instructions screen."""
         title = "INSTRUCTIONS"
         self.mlx.mlx_string_put(
-            self.mlx_ptr, self.win_ptr, center_x_str(title),
-            int(HEIGHT / 4), int(Color.YELLOW), title,
+            self.mlx_ptr,
+            self.win_ptr,
+            center_x_str(title),
+            int(HEIGHT / 4),
+            int(Color.YELLOW),
+            title,
         )
         lines = [
             "- Move: Arrow keys or WASD",
@@ -179,13 +222,21 @@ class MenuManager:
         start_y = int(HEIGHT / 3)
         for i, line in enumerate(lines):
             self.mlx.mlx_string_put(
-                self.mlx_ptr, self.win_ptr, center_x_str(line),
-                start_y + (i * 25), int(Color.WHITE), line,
+                self.mlx_ptr,
+                self.win_ptr,
+                center_x_str(line),
+                start_y + (i * 25),
+                int(Color.WHITE),
+                line,
             )
         footer = "Press ESC to return to Menu"
         self.mlx.mlx_string_put(
-            self.mlx_ptr, self.win_ptr, center_x_str(footer),
-            start_y + 150, int(Color.CYAN), footer,
+            self.mlx_ptr,
+            self.win_ptr,
+            center_x_str(footer),
+            start_y + 150,
+            int(Color.CYAN),
+            footer,
         )
 
     # --- Input -------------------------------------------------------------
@@ -195,10 +246,12 @@ class MenuManager:
         if state == GameState.MAIN_MENU:
             if keycode in (Key.UP, Key.Wb):
                 self.selected_index = (self.selected_index - 1) % len(
-                    self.main_options)
+                    self.main_options
+                )
             elif keycode in (Key.DOWN, Key.Sb):
                 self.selected_index = (self.selected_index + 1) % len(
-                    self.main_options)
+                    self.main_options
+                )
             elif keycode in (Key.ENTER, Key.SPACE):
                 self._execute_main_menu_action()
             elif keycode == Key.ESC:
@@ -229,10 +282,12 @@ class MenuManager:
         """Handle navigation in the mode-selection menu."""
         if keycode in (Key.UP, Key.Wb):
             self.selected_index = (self.selected_index - 1) % len(
-                self.mode_options)
+                self.mode_options
+            )
         elif keycode in (Key.DOWN, Key.Sb):
             self.selected_index = (self.selected_index + 1) % len(
-                self.mode_options)
+                self.mode_options
+            )
         elif keycode in (Key.ENTER, Key.SPACE):
             self._execute_mode_menu_action()
         elif keycode == Key.ESC:

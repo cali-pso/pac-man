@@ -9,7 +9,7 @@ class RuleSet(BaseModel):
     """Base configuration shared by every game mode."""
 
     game_mode: str = "normal"
-    level: int = 10
+    level: int = Field(gt=9, default=10)
     width: int = 30
     height: int = 40
     lives: int = 3
@@ -19,11 +19,11 @@ class RuleSet(BaseModel):
     seed: Any = 42
     max_level_time: int = 90
     # Tunable "engine" values (configurable):
-    ghost_speed: float = 0.38          # Seconds between two ghost steps.
-    pac_speed: float = 0.21            # Seconds between two Pac-Man steps.
-    power_duration: float = 8.0        # Super-pacgum duration (edible).
-    ghost_respawn_delay: float = 4.0   # Delay before an eaten ghost returns.
-    mega_spawn_chance: float = 0.01    # Mega spawn probability per level.
+    ghost_speed: float = 0.38  # Seconds between two ghost steps.
+    pac_speed: float = 0.21  # Seconds between two Pac-Man steps.
+    power_duration: float = 8.0  # Super-pacgum duration (edible).
+    ghost_respawn_delay: float = 4.0  # Delay before an eaten ghost returns.
+    mega_spawn_chance: float = 0.01  # Mega spawn probability per level.
     mega_score_multiplier: float = 1.5  # Score multiplier under mega.
 
     @model_validator(mode="before")
@@ -57,8 +57,8 @@ class ShadowRuleSet(RuleSet):
 class HardcoreRuleSet(RuleSet):
     """Configuration for the Hardcore mode preset."""
 
-    hardcore_lives: int = 1        # Lives (1 = a single attempt).
-    time_factor: float = 0.5       # Level time is multiplied by this factor.
+    hardcore_lives: int = 1  # Lives (1 = a single attempt).
+    time_factor: float = 0.5  # Level time is multiplied by this factor.
     no_super_pacgums: bool = True  # Remove super-pacgums.
 
 

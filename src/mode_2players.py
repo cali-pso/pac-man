@@ -16,15 +16,24 @@ SWITCH_MAX: float = 15.0
 
 # Per-player key maps (key code -> direction).
 P1_KEYS: Dict[int, Tuple[int, int]] = {
-    Key.Wb: (0, -1), Key.Sb: (0, 1), Key.Ab: (-1, 0), Key.Db: (1, 0),
+    Key.Wb: (0, -1),
+    Key.Sb: (0, 1),
+    Key.Ab: (-1, 0),
+    Key.Db: (1, 0),
 }
 P2_KEYS: Dict[int, Tuple[int, int]] = {
-    Key.UP: (0, -1), Key.DOWN: (0, 1), Key.LEFT: (-1, 0), Key.RIGHT: (1, 0),
+    Key.UP: (0, -1),
+    Key.DOWN: (0, 1),
+    Key.LEFT: (-1, 0),
+    Key.RIGHT: (1, 0),
 }
 
 # Coop: player 1 (WASD) moves vertically, player 2 (arrows) horizontally.
 COOP_KEYS: Dict[int, Tuple[int, int]] = {
-    Key.Wb: (0, -1), Key.Sb: (0, 1), Key.LEFT: (-1, 0), Key.RIGHT: (1, 0),
+    Key.Wb: (0, -1),
+    Key.Sb: (0, 1),
+    Key.LEFT: (-1, 0),
+    Key.RIGHT: (1, 0),
 }
 
 

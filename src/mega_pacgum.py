@@ -5,10 +5,10 @@ rule set (config); this module is kept as a reference for the default
 values and the per-mode spawn helper.
 """
 
-SPAWN_CHANCE: float = 0.01            # 1% in the concerned modes.
+SPAWN_CHANCE: float = 0.01  # 1% in the concerned modes.
 SPAWN_CHANCE_HARDCORE: float = 0.005  # 0.5% in hardcore.
-SCORE_MULTIPLIER: float = 1.5         # Score multiplier while mega is active.
-SPEED_FACTOR: float = 0.5             # Pac-Man cadence factor (faster).
+SCORE_MULTIPLIER: float = 1.5  # Score multiplier while mega is active.
+SPEED_FACTOR: float = 0.5  # Pac-Man cadence factor (faster).
 
 
 def spawn_chance_for(mode: str) -> float:

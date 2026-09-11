@@ -14,8 +14,15 @@ MAX_NAME_LEN = 10
 Entry = Tuple[str, int]
 
 # Storage keys / table order.
-MODES = ["Normal", "Hardcore", "Shadow", "Roguelite",
-         "Versus", "Coop", "Random"]
+MODES = [
+    "Normal",
+    "Hardcore",
+    "Shadow",
+    "Roguelite",
+    "Versus",
+    "Coop",
+    "Random",
+]
 
 # High-score screen pages: (title, [modes shown side by side]).
 PAGES = [

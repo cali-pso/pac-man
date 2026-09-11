@@ -28,7 +28,9 @@ BACKSPACE: int = 65288
 
 
 class App:
-    def __init__(self, width: int, height: int, title: str, config_filename: str) -> None:
+    def __init__(
+        self, width: int, height: int, title: str, config_filename: str
+    ) -> None:
         self.width = width
         self.height = height
         self.mlx = Mlx()
@@ -37,6 +39,12 @@ class App:
             self.mlx_ptr, self.width, self.height, title
         )
         self.audio = AudioManager()
+        self.music_tracks = {
+            "Normal": "normal_mode.mp3",
+            "Hardcore": "hardcore_mode.mp3",
+            "Shadow": "shadow_mode.mp3",
+            "Roguelite": "roguelite_mode.mp3",
+        }
         config_parser = ConfigParser()
         self.rulesets = config_parser.load_config(config_filename)
         self.highscores = HighscoreStore("highscores.json")
@@ -106,7 +114,7 @@ class App:
 
     def _go_to_menu(self) -> None:
         self.audio.stop_music()
-        self.audio.play_music("menu.wav")
+        self.audio.play_music("menu.mp3")
         self.session = None
         self._entering_name = False
         self._name_buffer = ""
@@ -122,8 +130,10 @@ class App:
         return mode
 
     def _start_game(self, mode: str) -> None:
+        self.mode = mode
         self.audio.stop_music()
-        self.audio.play_music("level.wav")
+        track = self.music_tracks.get(mode, "normal_mode.mp3")
+        self.audio.play_music(track)
         self._current_mode = mode
         try:
             ruleset = self.rulesets[self._ruleset_key(mode)]
@@ -248,6 +258,7 @@ class App:
             return
         self._finish_handled = True
         self.audio.stop_music()
+        self.audio.stop_eating_loop()
         if self.session.game_over:
             self.audio.play_sound("death.wav")
         self._entering_name = self.highscores.qualifies(
@@ -273,7 +284,9 @@ class App:
             return
 
         now = time.time()
-        pac_prog = max(0.0, min(1.0, (now - self._last_step) / self._pac_speed))
+        pac_prog = max(
+            0.0, min(1.0, (now - self._last_step) / self._pac_speed)
+        )
         ghost_prog = max(
             0.0, min(1.0, (now - self._last_ghost) / self._ghost_speed)
         )
@@ -328,11 +341,14 @@ class App:
         if self._current_mode == "Random":
             rs = self.rulesets.get("2 Players")
             rng = getattr(rs, "control_switch_time_range", None) or (
-                mode_2players.SWITCH_MIN, mode_2players.SWITCH_MAX)
+                mode_2players.SWITCH_MIN,
+                mode_2players.SWITCH_MAX,
+            )
             self._switch_min = float(rng[0])
             self._switch_max = float(rng[1])
             self._next_switch = time.time() + random.uniform(
-                self._switch_min, self._switch_max)
+                self._switch_min, self._switch_max
+            )
         else:
             self._next_switch = 0.0
         if self._current_mode == "Versus" and self.session is not None:
@@ -379,17 +395,16 @@ class App:
             moved = True
         if moved:
             if self.session.last_ate_mega:
+                self.audio.stop_eating_loop()  # Stop normal eating loop
                 self.audio.play_sound("mega_pickup.wav")
                 self.audio.stop_music()
                 self.audio.play_music("mega_active.wav")
             elif self.session.last_ate:
-                self.audio.play_sound("pacgum.wav")
+                self.audio.play_eating_loop("pacgum.wav")  # Trigger the loop
                 if self.shadow is not None:
                     self.shadow.on_pacgum()
             elif self.session.last_ate_super:
-                self.audio.play_sound("super_pacgum.wav")
-                self.audio.stop_music()
-                self.audio.play_music("super_active.wav")
+                self.audio.play_sound("mega_pickup.wav")
                 if self.shadow is not None:
                     self.shadow.on_shine()
                 if self._current_mode == "Roguelite":
@@ -397,14 +412,19 @@ class App:
                     self._apply_temp_effect(eff["spec"])
                     is_bonus = eff["kind"] == "bonus"
                     self.audio.play_sound(
-                        "roguelite_bonus.wav" if is_bonus
-                        else "roguelite_malus.wav")
+                        "roguelite_bonus.wav"
+                        if is_bonus
+                        else "roguelite_malus.wav"
+                    )
                     tag = "BONUS" if is_bonus else "MALUS"
                     self._temp_msg = f"{tag}: {eff['label']}"
                     self._temp_msg_color = 0x00DD00 if is_bonus else 0xFF6600
                     self._temp_msg_until = time.time() + 2.5
             else:
-                self.audio.play_sound("move.wav")  # deplacement sans manger
+                self.audio.stop_eating_loop()  # Stop if moving but empty cell
+            self._progress()
+        else:
+            self.audio.stop_eating_loop()  # Stop if hitting a wall
             self._progress()
 
     # --- Entrees -----------------------------------------------------------
@@ -498,7 +518,7 @@ class App:
         cy = self.height // 2
         self._put_center("LEVEL CLEARED - CHOOSE A CARD", cy - 90, 0xFFFF00)
         for i, ch in enumerate(self._choices):
-            selected = (i == self._choice_index)
+            selected = i == self._choice_index
             prefix = "> " if selected else "  "
             if ch.get("hidden"):
                 color = 0xFFFFFF if selected else 0xAAAAAA
@@ -525,8 +545,7 @@ class App:
             self._choice_index = (self._choice_index + 1) % len(self._choices)
             self._render_choice()
         elif keycode in (Key.ENTER, Key.SPACE):
-            self._roguelite.apply(self._run,
-                                  self._choices[self._choice_index])
+            self._roguelite.apply(self._run, self._choices[self._choice_index])
             self._choosing = False
             self._next_level()
 
@@ -558,7 +577,9 @@ class App:
         if self.session is None:
             return
         if self._current_mode == "Versus":
-            gd = mode_2players.player_dir(keycode, 2)  # J2 = fleches -> fantome
+            gd = mode_2players.player_dir(
+                keycode, 2
+            )  # J2 = fleches -> fantome
             if gd is not None:
                 self.session.set_ghost_direction(*gd)
                 return
@@ -576,6 +597,7 @@ class App:
         if self.session is None:
             return
         self.session.pause()
+        self.audio.stop_eating_loop()
         self._pause_index = 0
         self.state = GameState.PAUSED
         self._render_pause()
@@ -650,7 +672,9 @@ class App:
         s = self.session
         if s is None or self._finished():
             return
-        pac_prog = max(0.0, min(1.0, (now - self._last_step) / self._pac_speed))
+        pac_prog = max(
+            0.0, min(1.0, (now - self._last_step) / self._pac_speed)
+        )
         ghost_prog = max(
             0.0, min(1.0, (now - self._last_ghost) / self._ghost_speed)
         )
@@ -675,7 +699,8 @@ class App:
                 self._active_player = 2 if self._active_player == 1 else 1
                 self.session.active_player = self._active_player
                 self._next_switch = now + random.uniform(
-                    self._switch_min, self._switch_max)
+                    self._switch_min, self._switch_max
+                )
                 self._reset_move()
             # Pac-Man en maintien : avance a SA cadence tant que ca repete
             if now - self._last_step >= self._pac_speed:
@@ -685,9 +710,7 @@ class App:
                 self.shadow.update()
             # Fin du mode POWERED
             if self.session is not None and not self._finished():
-                if self.session.update_power():
-                    self.audio.stop_music()
-                    self.audio.play_music("level.wav")
+                self.session.update_power()
             # Fantomes
             if (
                 self.session is not None
@@ -709,7 +732,7 @@ class App:
         return 0
 
     def run(self) -> None:
-        self.audio.play_music("intro.wav")
+        self.audio.play_music("shadow_mode.mp3")
         self.intro.render()
 
         self.mlx.mlx_key_hook(self.win_ptr, self._key_hook, 0)

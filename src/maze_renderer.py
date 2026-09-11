@@ -137,8 +137,8 @@ class MazeRenderer:
                 src_idx = src_y * sl_o + src_x * bpp
                 dst_idx = y * sl_n + x * bpp
 
-                new_bytes[dst_idx: dst_idx + bpp] = orig_bytes[
-                    src_idx: src_idx + bpp
+                new_bytes[dst_idx : dst_idx + bpp] = orig_bytes[
+                    src_idx : src_idx + bpp
                 ]
 
         # Assign the calculated bytes to the new image buffer
@@ -189,7 +189,7 @@ class MazeRenderer:
             if x1 <= x0:
                 return
             base = y * size_line + x0 * bpp_bytes
-            buf[base: base + (x1 - x0) * bpp_bytes] = wall_b * (x1 - x0)
+            buf[base : base + (x1 - x0) * bpp_bytes] = wall_b * (x1 - x0)
 
         def vline(x: int, y0: int, y1: int) -> None:
             """Draw a 1px vertical wall line."""
@@ -199,7 +199,7 @@ class MazeRenderer:
             y1 = min(ih, y1)
             for yy in range(y0, y1):
                 off = yy * size_line + x * bpp_bytes
-                buf[off: off + bpp_bytes] = wall_b
+                buf[off : off + bpp_bytes] = wall_b
 
         def hband(x0: int, x1: int, y: int) -> None:
             """Draw a thick horizontal wall band."""
@@ -304,7 +304,7 @@ class MazeRenderer:
             if x1 < x0:
                 continue
             base = yy * sl + x0 * bb
-            work[base: base + (x1 - x0 + 1) * bb] = color * (x1 - x0 + 1)
+            work[base : base + (x1 - x0 + 1) * bb] = color * (x1 - x0 + 1)
 
     def _fill_dot(
         self, work: bytearray, cx: int, cy: int, r: int, color: bytes
@@ -322,10 +322,11 @@ class MazeRenderer:
             if x1 < x0:
                 continue
             base = yy * sl + x0 * bb
-            work[base: base + (x1 - x0 + 1) * bb] = color * (x1 - x0 + 1)
+            work[base : base + (x1 - x0 + 1) * bb] = color * (x1 - x0 + 1)
 
     def _draw_walls(
-        self, work: bytearray,
+        self,
+        work: bytearray,
         visible: Optional[Callable[[int, int], bool]],
     ) -> None:
         """Draw the maze walls into work, clipped by visible."""
@@ -345,7 +346,7 @@ class MazeRenderer:
                 yy = y + t
                 if 0 <= yy < ih and x1 > x0:
                     base = yy * sl + x0 * bb
-                    work[base: base + (x1 - x0) * bb] = wb * (x1 - x0)
+                    work[base : base + (x1 - x0) * bb] = wb * (x1 - x0)
 
         def vband(x: int, y0: int, y1: int) -> None:
             """Draw a clipped vertical wall band."""
@@ -356,7 +357,7 @@ class MazeRenderer:
                 if 0 <= xx < iw:
                     for yy in range(y0, y1):
                         off = yy * sl + xx * bb
-                        work[off: off + bb] = wb
+                        work[off : off + bb] = wb
 
         for y in range(maze.rows):
             for x in range(maze.cols):

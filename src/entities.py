@@ -153,6 +153,7 @@ class Ghost(Entity):
             def key(d: Tuple[int, int]) -> int:
                 """Manhattan distance from candidate cell to the target."""
                 return abs(self.x + d[0] - tx) + abs(self.y + d[1] - ty)
+
             # Edible -> flee (max distance); otherwise chase (min distance).
             if self.state == EntityState.POWERED:
                 choice = max(free, key=key)

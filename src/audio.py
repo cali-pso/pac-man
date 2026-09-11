@@ -16,8 +16,13 @@ class AudioManager:
         self.sound_dir = sound_dir
         self.enabled = True
         self._pygame_ready = False
+        self.pac_channel = None  # New dedicated channel
+        self.pacgum_sound = None
+
         try:
             pygame.mixer.init()
+            pygame.mixer.set_reserved(1)  # Reserve Channel 0
+            self.pac_channel = pygame.mixer.Channel(0)
             self._pygame_ready = True
         except Exception:
             self.enabled = False
@@ -60,3 +65,23 @@ class AudioManager:
             pygame.mixer.Sound(path).play()
         except Exception:
             pass
+
+    def play_eating_loop(self, name: str) -> None:
+        """Plays the eating sound in a continuous monophonic loop."""
+        if not self.enabled or self.pac_channel is None:
+            return
+
+        # Load the sound once if it hasn't been loaded
+        if self.pacgum_sound is None:
+            path = self._find(name)
+            if path:
+                self.pacgum_sound = pygame.mixer.Sound(path)
+
+        # Start looping only if the channel is currently silent
+        if self.pacgum_sound and not self.pac_channel.get_busy():
+            self.pac_channel.play(self.pacgum_sound, loops=-1)
+
+    def stop_eating_loop(self) -> None:
+        """Stops the eating loop immediately."""
+        if self.enabled and self.pac_channel is not None:
+            self.pac_channel.stop()
