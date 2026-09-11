@@ -1,3 +1,5 @@
+"""Game entities: the abstract ``Entity`` and its Pac-Man and Ghost kinds."""
+
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 import random
@@ -16,15 +18,20 @@ GHOST_RANDOMNESS = 0.25
 
 
 class EntityState(Enum):
+    """The behavioural state of an entity."""
+
     NORMAL = auto()
-    POWERED = auto()  # fantome comestible
+    POWERED = auto()  # Edible ghost.
     DEAD = auto()
 
 
 class Entity(ABC):
+    """Base class for anything that occupies and moves on the grid."""
+
     def __init__(
         self, start_x: int, start_y: int, color: int, playable: bool = False
-    ):
+    ) -> None:
+        """Initialise position, spawn point, direction and state."""
         self.x = start_x
         self.y = start_y
         self.spawn_x = start_x
@@ -40,6 +47,7 @@ class Entity(ABC):
         self.is_player = False
 
     def reset_position(self) -> None:
+        """Move the entity back to its spawn point and clear its motion."""
         self.x = self.spawn_x
         self.y = self.spawn_y
         self.prev_x, self.prev_y = self.spawn_x, self.spawn_y
@@ -50,6 +58,7 @@ class Entity(ABC):
     def can_step(
         cells: list, x: int, y: int, dx: int, dy: int, rows: int, cols: int
     ) -> bool:
+        """Return whether stepping from (x, y) by (dx, dy) is possible."""
         wall = _DIR_WALL.get((dx, dy))
         if not wall:
             return False
@@ -66,16 +75,22 @@ class Entity(ABC):
         cols: int,
         target: Optional[Tuple[int, int]] = None,
         occupied: Optional[Set[Tuple[int, int]]] = None,
-    ) -> None: ...
+    ) -> None:
+        """Advance the entity by one step (implemented by subclasses)."""
+        ...
 
 
 class PacMan(Entity):
-    def __init__(self, start_x: int, start_y: int):
+    """The player-controlled Pac-Man."""
+
+    def __init__(self, start_x: int, start_y: int) -> None:
+        """Create Pac-Man at the given start cell."""
         super().__init__(start_x, start_y, color=0xFFFF00, playable=True)
 
     def try_move(
         self, dx: int, dy: int, cells: list, rows: int, cols: int
     ) -> bool:
+        """Try to move by (dx, dy); return True if the move happened."""
         if not self.can_move:
             return False
         if not self.can_step(cells, self.x, self.y, dx, dy, rows, cols):
@@ -94,11 +109,14 @@ class PacMan(Entity):
         target: Optional[Tuple[int, int]] = None,
         occupied: Optional[Set[Tuple[int, int]]] = None,
     ) -> None:
-        pass  # pilote au clavier
+        """Pac-Man is keyboard-driven: nothing to do here."""
 
 
 class Ghost(Entity):
-    def __init__(self, start_x: int, start_y: int, color: int):
+    """An autonomous ghost that chases or flees Pac-Man."""
+
+    def __init__(self, start_x: int, start_y: int, color: int) -> None:
+        """Create a ghost at the given start cell with the given color."""
         super().__init__(start_x, start_y, color=color)
 
     def update(
@@ -109,8 +127,9 @@ class Ghost(Entity):
         target: Optional[Tuple[int, int]] = None,
         occupied: Optional[Set[Tuple[int, int]]] = None,
     ) -> None:
+        """Move the ghost one step (chase, flee, or wander)."""
         if not self.can_move or self.state == EntityState.DEAD:
-            return  # un fantome mort ne bouge pas
+            return  # A dead ghost does not move.
         occupied = occupied or set()
         back = (-self.dir_x, -self.dir_y)
         options = [
@@ -121,7 +140,7 @@ class Ghost(Entity):
         if not options:
             return
         forward = [d for d in options if d != back] or options
-        # Evite de se poser sur un autre fantome si possible
+        # Avoid landing on another ghost when possible.
         free = [
             d
             for d in forward
@@ -132,8 +151,9 @@ class Ghost(Entity):
             tx, ty = target
 
             def key(d: Tuple[int, int]) -> int:
+                """Manhattan distance from candidate cell to the target."""
                 return abs(self.x + d[0] - tx) + abs(self.y + d[1] - ty)
-            # Comestible -> fuit (max distance) ; sinon -> poursuit (min)
+            # Edible -> flee (max distance); otherwise chase (min distance).
             if self.state == EntityState.POWERED:
                 choice = max(free, key=key)
             else:

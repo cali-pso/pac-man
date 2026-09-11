@@ -1,6 +1,6 @@
 import time
 import struct
-from typing import Optional
+from typing import Any, Callable, Dict, Optional
 
 from src.entities import EntityState
 from src.game_session import GameSession
@@ -10,24 +10,27 @@ WALL_COLOR: int = 0x5555FF
 PAC_COLOR: int = 0xFFFF00
 GUM_COLOR: int = 0xF0C0A0
 SUPER_COLOR: int = 0xFFFFFF
-FRIGHT_COLOR: int = 0x2222EE  # fantome comestible
-MEGA_COLOR: int = 0xFF33FF  # mega pacgum
+FRIGHT_COLOR: int = 0x2222EE  # Edible ghost.
+MEGA_COLOR: int = 0xFF33FF  # Mega pacgum.
 BG_COLOR: int = 0x000000
 HUD_COLOR: int = 0xFFFFFF
 MARGIN: int = 30
 THICK: int = 2
-TOP_PAD: int = 34  # bande du haut reservee au HUD
+TOP_PAD: int = 34  # Top strip reserved for the HUD.
 
 
 class MazeRenderer:
+    """Renders the maze, entities and HUD into an MLX image."""
+
     def __init__(
         self,
-        mlx_inst: object,
+        mlx_inst: Any,
         mlx_ptr: object,
         win_ptr: object,
         screen_w: int,
         screen_h: int,
     ) -> None:
+        """Store MLX handles and screen size, then preload sprites."""
         self.mlx = mlx_inst
         self.mlx_ptr = mlx_ptr
         self.win_ptr = win_ptr
@@ -36,12 +39,12 @@ class MazeRenderer:
 
         self._img: Optional[object] = None
         self._mvb: Optional[memoryview] = None
-        self._template: Optional[bytearray] = None
+        self._template: bytearray = bytearray()
         self._ready = False
         self.cell = 0
         self.iw = 0
         self.ih = 0
-        self.mox = 0  # origine du labyrinthe dans l'image
+        self.mox = 0  # Maze origin inside the image.
         self.moy = 0
         self.size_line = 0
         self.bpp_bytes = 4
@@ -53,7 +56,8 @@ class MazeRenderer:
         self._load_sprites()
 
     def _load_sprites(self) -> None:
-        self.sprites = {"pacman": {}, "ghosts": {}}
+        """Load Pac-Man and ghost sprite images from disk."""
+        self.sprites: Dict[str, Any] = {"pacman": {}, "ghosts": {}}
         dirs = ["up", "down", "left", "right"]
 
         ghost_files = {
@@ -90,6 +94,7 @@ class MazeRenderer:
         }
 
     def _flush(self) -> None:
+        """Flush the MLX buffer to the screen (best effort)."""
         try:
             self.mlx.mlx_do_sync(self.mlx_ptr)
         except Exception:
@@ -97,6 +102,7 @@ class MazeRenderer:
 
     @staticmethod
     def _pack(color: int, endian: int) -> bytes:
+        """Pack a 0xRRGGBB color into 4 opaque bytes."""
         fmt = "<I" if endian == 0 else ">I"
         return struct.pack(fmt, 0xFF000000 | (color & 0xFFFFFF))
 
@@ -142,6 +148,7 @@ class MazeRenderer:
         return new_img
 
     def prepare(self, maze: Maze) -> None:
+        """Precompute the static maze template and layout."""
         self._ready = False
         self.mlx.mlx_clear_window(self.mlx_ptr, self.win_ptr)
         cols, rows = maze.cols, maze.rows
@@ -174,6 +181,7 @@ class MazeRenderer:
         buf = bytearray(bg_b * (size_line * ih // bpp_bytes))
 
         def hline(x0: int, x1: int, y: int) -> None:
+            """Draw a 1px horizontal wall line."""
             if y < 0 or y >= ih:
                 return
             x0 = max(0, x0)
@@ -184,6 +192,7 @@ class MazeRenderer:
             buf[base: base + (x1 - x0) * bpp_bytes] = wall_b * (x1 - x0)
 
         def vline(x: int, y0: int, y1: int) -> None:
+            """Draw a 1px vertical wall line."""
             if x < 0 or x >= iw:
                 return
             y0 = max(0, y0)
@@ -193,10 +202,12 @@ class MazeRenderer:
                 buf[off: off + bpp_bytes] = wall_b
 
         def hband(x0: int, x1: int, y: int) -> None:
+            """Draw a thick horizontal wall band."""
             for t in range(THICK):
                 hline(x0, x1, y + t)
 
         def vband(x: int, y0: int, y1: int) -> None:
+            """Draw a thick vertical wall band."""
             for t in range(THICK):
                 vline(x + t, y0, y1)
 
@@ -237,7 +248,7 @@ class MazeRenderer:
         # SCALE SPRITES TO MATCH CELL SIZE
         # 0.85 multiplier provides visual padding so sprites don't touch walls
         sprite_size = max(4, int(cell * 0.85))
-        self.scaled_sprites = {"pacman": {}, "ghosts": {}}
+        self.scaled_sprites: Dict[str, Any] = {"pacman": {}, "ghosts": {}}
 
         # Process Pac-Man animations
         for d_str, frames in self.sprites["pacman"].items():
@@ -271,7 +282,7 @@ class MazeRenderer:
 
         self._ready = True
 
-    def _get_dot_spans(self, r: int):
+    def _get_dot_spans(self, r: int) -> list:
         """Caches the horizontal spans for drawing a circle of radius r."""
         spans = []
         for dy in range(-r, r + 1):
@@ -281,6 +292,7 @@ class MazeRenderer:
     def _fill_dot_fast(
         self, work: bytearray, cx: int, cy: int, spans: list, color: bytes
     ) -> None:
+        """Fill a disc into work using precomputed spans."""
         sl = self.size_line
         bb = self.bpp_bytes
         for dy, span in spans:
@@ -297,6 +309,7 @@ class MazeRenderer:
     def _fill_dot(
         self, work: bytearray, cx: int, cy: int, r: int, color: bytes
     ) -> None:
+        """Fill a disc of radius r into work."""
         sl = self.size_line
         bb = self.bpp_bytes
         for dy in range(-r, r + 1):
@@ -311,9 +324,11 @@ class MazeRenderer:
             base = yy * sl + x0 * bb
             work[base: base + (x1 - x0 + 1) * bb] = color * (x1 - x0 + 1)
 
-    def _draw_walls(self, work: bytearray, visible) -> None:
-        """Dessine les murs dans work. visible(x, y) filtre par cellule
-        (None-safe : si visible est None, tout est dessine)."""
+    def _draw_walls(
+        self, work: bytearray,
+        visible: Optional[Callable[[int, int], bool]],
+    ) -> None:
+        """Draw the maze walls into work, clipped by visible."""
         maze = self._maze
         cell = self.cell
         mox, moy = self.mox, self.moy
@@ -322,7 +337,8 @@ class MazeRenderer:
         wb = self._wall_b
         iw, ih = self.iw, self.ih
 
-        def hband(x0, x1, y):
+        def hband(x0: int, x1: int, y: int) -> None:
+            """Draw a clipped horizontal wall band."""
             x0 = max(0, x0)
             x1 = min(iw, x1)
             for t in range(THICK):
@@ -331,7 +347,8 @@ class MazeRenderer:
                     base = yy * sl + x0 * bb
                     work[base: base + (x1 - x0) * bb] = wb * (x1 - x0)
 
-        def vband(x, y0, y1):
+        def vband(x: int, y0: int, y1: int) -> None:
+            """Draw a clipped vertical wall band."""
             y0 = max(0, y0)
             y1 = min(ih, y1)
             for t in range(THICK):
@@ -360,28 +377,29 @@ class MazeRenderer:
     def render(
         self, session: GameSession, pac_prog: float, ghost_prog: float
     ) -> None:
+        """Render one frame: maze, items, sprites and HUD."""
         if not self._ready or self._mvb is None:
             return
         cell = self.cell
         half = cell // 2
         mox, moy = self.mox, self.moy
 
-        # Mode shadow : ne revele que ce qui est dans la zone lumineuse.
+        # Shadow mode: only reveal what's inside the light zone
         shadow = getattr(session, "shadow", None)
         px, py = session.pacman.x, session.pacman.y
 
         mega_on = getattr(session, "mega_active", False)
 
         def visible(ex: int, ey: int) -> bool:
+            """Return whether cell (ex, ey) is visible."""
             if mega_on:
-                return True  # mega actif : toute la map eclairee
+                return True  # mega activate : full visible
             return shadow is None or shadow.is_visible(ex, ey, px, py)
 
         if shadow is None:
-            # Mode normal : murs deja graves dans le template (rapide).
             work = bytearray(self._template)
         else:
-            # Mode shadow : fond noir + murs dessines selon la zone lumineuse.
+            # shadow Mode : walls drawn according to the illuminated area.
             work = bytearray(
                 self._bg_b * (self.size_line * self.ih // self.bpp_bytes)
             )
@@ -404,7 +422,7 @@ class MazeRenderer:
                     self._gum_b,
                 )
 
-        # Super-pacgums (plus gros)
+        # Super-pacgums
         super_r = max(2, cell // 3)
         for gx, gy in session.super_pacgums:
             if visible(gx, gy):
@@ -416,7 +434,7 @@ class MazeRenderer:
                     self._super_b,
                 )
 
-        # Mega pacgum (present tant que non mange)
+        # Mega pacgum: stay visible until eaten
         mpos = getattr(session, "mega_pos", None)
         if mpos is not None and visible(mpos[0], mpos[1]):
             self._fill_dot(
@@ -435,6 +453,7 @@ class MazeRenderer:
 
         # Lerp helper
         def lerp(p0: int, p1: int, t: float) -> float:
+            """Linear interpolation between p0 and p1 by t."""
             return p0 + (p1 - p0) * t
 
         p_x = lerp(session.pacman.prev_x, session.pacman.x, pac_prog)
@@ -489,14 +508,14 @@ class MazeRenderer:
         )
 
         mode = getattr(session, "mode", "Normal")
-        # Mode Normal : HUD minimal impose par le sujet.
+        # Normal Mode : minimal HUD
         segs = [
             f"Level: {getattr(session, 'level', 1)}",
             f"Score: {session.score}",
             f"Lives: {session.lives}",
             f"Time: {session.time_left()}",
         ]
-        # Autres modes : infos supplementaires.
+        # other modes : more infos.
         if mode != "Normal":
             segs.append(f"Gums: {len(session.pacgums)}")
             segs.append(f"Super: {len(session.super_pacgums)}")
@@ -524,7 +543,6 @@ class MazeRenderer:
             segs.append("CHEATS: ON")
         if session.invicible:
             segs.append("GOD MODE: ON")
-        # Retour a la ligne quand la barre depasse la largeur de la fenetre.
         sep = "   "
         max_chars = max(16, (self.screen_w - 20) // 9)
         lines = []

@@ -1,10 +1,12 @@
+"""Intro cinematic: a few ASCII story slides shown before the menu."""
+
 import time
 from typing import Any, List, Tuple
 
 from mlx import Mlx
 from src.utils import HEIGHT, center_x_str
 
-# Couleurs correctes au format 0xRRGGBB
+# Colors in 0xRRGGBB format.
 C_YELLOW: int = 0xFFFF00
 C_RED: int = 0xFF0000
 C_PINK: int = 0xFF9CCE
@@ -14,23 +16,26 @@ C_WHITE: int = 0xFFFFFF
 C_GREEN: int = 0x33CC66
 C_GRAY: int = 0x888888
 
-# Duree d'affichage de chaque slide, en secondes.
+# How long each slide is displayed, in seconds.
 SLIDE_SECONDS: float = 4
 
-# Un bloc = (kind, data, color, line_height)
+# A block is (kind, data, color, line_height).
 Block = Tuple[str, Any, Any, int]
 Slide = List[Block]
 
 
 def art(lines: List[str], color: int, line_h: int = 16) -> Block:
+    """Build an ASCII-art block."""
     return ("art", lines, color, line_h)
 
 
 def lst(rows: List[Tuple[str, int]], line_h: int = 24) -> Block:
+    """Build a colored list block (each row has its own color)."""
     return ("list", rows, None, line_h)
 
 
 def text(rows: List[Tuple[str, int]], line_h: int = 26) -> Block:
+    """Build a text block (each line has its own color)."""
     return ("text", rows, None, line_h)
 
 
@@ -53,7 +58,7 @@ PAC_SMALL: List[str] = [
 
 
 def build_slides() -> List[Slide]:
-    """Construit les slides de l'intro. Textes 100% originaux."""
+    """Build the intro slides (all text is original)."""
     return [
         [
             art(PAC, C_YELLOW),
@@ -96,11 +101,12 @@ def build_slides() -> List[Slide]:
 
 
 class IntroScene:
-    """Gere l'affichage et l'avancement de la cinematique d'intro."""
+    """Displays and advances the intro cinematic."""
 
     def __init__(
         self, mlx_inst: Mlx, mlx_ptr: object, win_ptr: object
     ) -> None:
+        """Store the MLX handles and build the slides."""
         self.mlx = mlx_inst
         self.mlx_ptr = mlx_ptr
         self.win_ptr = win_ptr
@@ -111,23 +117,25 @@ class IntroScene:
         self._rendered_index: int = -1
 
     def reset(self) -> None:
-        """Relance l'intro depuis le debut."""
+        """Restart the intro from the first slide."""
         self.index = 0
         self.started_at = time.time()
         self.finished = False
         self._rendered_index = -1
 
     def _put(self, x: int, y: int, color: int, s: str) -> None:
+        """Draw a string at (x, y) with the given color."""
         self.mlx.mlx_string_put(self.mlx_ptr, self.win_ptr, x, y, color, s)
 
     def _slide_height(self, slide: Slide) -> int:
+        """Return the total pixel height of a slide."""
         total = 0
         for _kind, data, _color, line_h in slide:
             total += len(data) * line_h + 10
         return total
 
     def render(self) -> None:
-        """Dessine le slide courant, centre verticalement."""
+        """Draw the current slide, vertically centered."""
         self.mlx.mlx_clear_window(self.mlx_ptr, self.win_ptr)
         slide = self.slides[self.index]
 
@@ -142,14 +150,13 @@ class IntroScene:
                     y += line_h
 
             elif kind == "list":
-                # Find the longest list item to center the block uniformly
                 longest_line = max((s for s, _c in data), key=len)
                 block_x = max(10, center_x_str(longest_line))
                 for s, c in data:
                     self._put(block_x, y, c, s)
                     y += line_h
 
-            else:  # text : chaque ligne centree individuellement
+            else:  # text: each line centered individually.
                 for s, c in data:
                     x = max(10, center_x_str(s))
                     self._put(x, y, c, s)
@@ -157,7 +164,6 @@ class IntroScene:
 
             y += 10
 
-        # Pied de page : indice de progression + hint skip
         progress = f"[{self.index + 1}/{len(self.slides)}]"
         self._put(center_x_str(progress), HEIGHT - 55, C_GRAY, progress)
 
@@ -166,9 +172,7 @@ class IntroScene:
         self._rendered_index = self.index
 
     def update(self) -> bool:
-        """Fait avancer les slides selon le temps ecoule.
-        Retourne True quand l'intro est terminee.
-        """
+        """Advance the slides over time; return True when finished."""
         if self.finished:
             return True
         if time.time() - self.started_at >= SLIDE_SECONDS:
@@ -182,5 +186,5 @@ class IntroScene:
         return False
 
     def skip(self) -> None:
-        """Termine immediatement l'intro (touche pressee)."""
+        """End the intro immediately (a key was pressed)."""
         self.finished = True

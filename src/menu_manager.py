@@ -1,19 +1,25 @@
+"""Menu screens: main menu, mode selection, high scores and instructions."""
+
 from typing import List, Optional
+
 from mlx import Mlx
 from src.utils import Color, Key, GameState, WIDTH, HEIGHT, quit, center_x_str
-from src.highscore import PAGES
+from src.highscore import PAGES, HighscoreStore
 from src.mode_2players import SUBMODES
 
 
 class MenuManager:
+    """Draws the menus and handles their keyboard navigation."""
+
     def __init__(
         self,
         mlx_inst: Mlx,
         mlx_ptr: object,
         win_ptr: object,
         state: GameState,
-        highscores: object = None,
+        highscores: Optional[HighscoreStore] = None,
     ) -> None:
+        """Store the MLX handles and initialise the menu state."""
         self.mlx = mlx_inst
         self.mlx_ptr = mlx_ptr
         self.win_ptr = win_ptr
@@ -42,6 +48,7 @@ class MenuManager:
         ]
 
     def render(self) -> None:
+        """Draw the screen matching the current menu state."""
         if self.state == GameState.PLAYING:
             return
         self.mlx.mlx_clear_window(self.mlx_ptr, self.win_ptr)
@@ -57,12 +64,12 @@ class MenuManager:
         elif self.state == GameState.MENU_INSTRUCTIONS:
             self._draw_instructions()
 
-    # --- Listes de menu ----------------------------------------------------
+    # --- Menu lists --------------------------------------------------------
 
-    def _draw_list(self,
-                   title: str,
-                   options: List[str],
-                   selected: int) -> None:
+    def _draw_list(
+        self, title: str, options: List[str], selected: int
+    ) -> None:
+        """Draw a centered title and a vertical list with a cursor."""
         self.mlx.mlx_string_put(
             self.mlx_ptr, self.win_ptr, center_x_str(title),
             int(HEIGHT / 4), int(Color.GREEN), title,
@@ -80,14 +87,17 @@ class MenuManager:
             )
 
     def _draw_main_menu(self) -> None:
+        """Draw the main menu."""
         self._draw_list("=== PAC-MAN ===", self.main_options,
                         self.selected_index)
 
     def _draw_mode_menu(self) -> None:
+        """Draw the mode-selection menu."""
         self._draw_list("=== CHOOSE MODE ===", self.mode_options,
                         self.selected_index)
 
     def _draw_2p_submenu(self) -> None:
+        """Draw the two-player sub-menu."""
         self._draw_list("=== 2 PLAYERS ===", self.sub2p_options,
                         self.sub2p_index)
         hint = "ESC to go back"
@@ -97,14 +107,15 @@ class MenuManager:
             int(Color.GRAY), hint,
         )
 
-    # --- Highscores (pages, cote a cote) -----------------------------------
+    # --- High scores (paged, side by side) ---------------------------------
 
     @staticmethod
     def _center_at(text: str, center_x: int) -> int:
-        """X pour centrer 'text' autour de center_x (police 9 px)."""
+        """Return the X to center ``text`` around ``center_x`` (9px font)."""
         return max(0, center_x - (len(text) * 9) // 2)
 
     def _draw_table(self, mode: str, center_x: int, top_y: int) -> None:
+        """Draw one high-score table centered around ``center_x``."""
         self.mlx.mlx_string_put(
             self.mlx_ptr, self.win_ptr, self._center_at(mode, center_x),
             top_y, int(Color.YELLOW), mode,
@@ -125,6 +136,7 @@ class MenuManager:
             )
 
     def _draw_highscores(self) -> None:
+        """Draw the current high-score page (one or several tables)."""
         page_title, modes = PAGES[self.hs_index]
         title = f"HIGHSCORES - {page_title}"
         self.mlx.mlx_string_put(
@@ -150,6 +162,7 @@ class MenuManager:
         )
 
     def _draw_instructions(self) -> None:
+        """Draw the instructions screen."""
         title = "INSTRUCTIONS"
         self.mlx.mlx_string_put(
             self.mlx_ptr, self.win_ptr, center_x_str(title),
@@ -175,9 +188,10 @@ class MenuManager:
             start_y + 150, int(Color.CYAN), footer,
         )
 
-    # --- Entrees -----------------------------------------------------------
+    # --- Input -------------------------------------------------------------
 
     def handle_key(self, keycode: int, state: GameState) -> None:
+        """Dispatch a key press to the handler of the current state."""
         if state == GameState.MAIN_MENU:
             if keycode in (Key.UP, Key.Wb):
                 self.selected_index = (self.selected_index - 1) % len(
@@ -212,6 +226,7 @@ class MenuManager:
         self.render()
 
     def _handle_mode_menu(self, keycode: int) -> None:
+        """Handle navigation in the mode-selection menu."""
         if keycode in (Key.UP, Key.Wb):
             self.selected_index = (self.selected_index - 1) % len(
                 self.mode_options)
@@ -224,6 +239,7 @@ class MenuManager:
             self.state = GameState.MAIN_MENU
 
     def _handle_2p_submenu(self, keycode: int) -> None:
+        """Handle navigation in the two-player sub-menu."""
         if keycode in (Key.UP, Key.Wb):
             self.sub2p_index = (self.sub2p_index - 1) % len(self.sub2p_options)
         elif keycode in (Key.DOWN, Key.Sb):
@@ -236,6 +252,7 @@ class MenuManager:
             self.sub2p = False
 
     def _execute_main_menu_action(self) -> None:
+        """Run the selected main-menu entry."""
         choice = self.main_options[self.selected_index]
         if choice == "Start Game":
             self.state = GameState.MODE_MENU
@@ -250,6 +267,7 @@ class MenuManager:
             quit(self.mlx, self.mlx_ptr)
 
     def _execute_mode_menu_action(self) -> None:
+        """Run the selected mode entry (or open the 2-player sub-menu)."""
         choice = self.mode_options[self.selected_index]
         if choice == "2 Players":
             self.sub2p = True

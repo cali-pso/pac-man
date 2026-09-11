@@ -1,11 +1,19 @@
+"""Hardcore mode preset: fewer lives, reduced time, no super-pacgums.
+
+Default values act as fallbacks; in game they come from ``config.json``
+(the ``hardcore_mode`` section) through the ``HardcoreRuleSet``.
+"""
+
 HARDCORE_LIVES: int = 1
 TIME_FACTOR: float = 0.5
 NO_SUPER_PACGUMS: bool = True
 
 
 def apply_to_ruleset_kwargs(base: dict, ruleset: object = None) -> dict:
-    """Applique le preset hardcore : temps reduit + vies limitees.
-    Les valeurs sont lues sur le ruleset (config), avec repli sur constantes.
+    """Return session kwargs with the hardcore preset applied.
+
+    Reduces the level time and limits the lives, reading the values from
+    the rule set (config) and falling back to the module constants.
     """
     kw = dict(base)
     factor = getattr(ruleset, "time_factor", TIME_FACTOR)
@@ -16,5 +24,5 @@ def apply_to_ruleset_kwargs(base: dict, ruleset: object = None) -> dict:
 
 
 def no_supers_for(ruleset: object = None) -> bool:
-    """Faut-il retirer les super-pacgums ? (config, repli sur constante)"""
+    """Return whether super-pacgums must be removed (config, then default)."""
     return getattr(ruleset, "no_super_pacgums", NO_SUPER_PACGUMS)

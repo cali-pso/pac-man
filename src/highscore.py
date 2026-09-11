@@ -1,3 +1,9 @@
+"""Persistent per-mode high-score storage (a single JSON file).
+
+Robust to file errors. Keeps a top 10 per mode; names are at most 10
+characters (alphanumeric and spaces) and scores are non-negative integers.
+"""
+
 import json
 import os
 from typing import Dict, List, Tuple
@@ -7,11 +13,11 @@ MAX_NAME_LEN = 10
 
 Entry = Tuple[str, int]
 
-# Ordre des tableaux (utilise pour la bascule gauche/droite au menu)
+# Storage keys / table order.
 MODES = ["Normal", "Hardcore", "Shadow", "Roguelite",
          "Versus", "Coop", "Random"]
 
-# Pages de l'ecran highscores : (titre, [modes affiches cote a cote]).
+# High-score screen pages: (title, [modes shown side by side]).
 PAGES = [
     ("Normal", ["Normal"]),
     ("Hardcore", ["Hardcore"]),
@@ -22,13 +28,15 @@ PAGES = [
 
 
 class HighscoreStore:
+    """Loads, holds and saves the per-mode high-score tables."""
+
     def __init__(self, path: str = "highscores.json") -> None:
+        """Load the tables from ``path`` (empty tables if unavailable)."""
         self.path = path
         self.by_mode: Dict[str, List[Entry]] = self._load()
 
-    # --- Chargement / sauvegarde ------------------------------------------
-
     def _load(self) -> Dict[str, List[Entry]]:
+        """Read and sanitise the tables, or return empty ones on error."""
         data: Dict[str, List[Entry]] = {m: [] for m in MODES}
         if not os.path.isfile(self.path):
             return data
@@ -44,6 +52,7 @@ class HighscoreStore:
         return data
 
     def _sanitize(self, raw: object) -> List[Entry]:
+        """Return a clean, sorted, truncated list of (name, score)."""
         clean: List[Entry] = []
         if isinstance(raw, list):
             for item in raw:
@@ -58,6 +67,7 @@ class HighscoreStore:
         return clean[:MAX_ENTRIES]
 
     def save(self) -> None:
+        """Write all tables to disk, ignoring write errors."""
         try:
             payload = {
                 mode: [[n, s] for (n, s) in entries]
@@ -68,9 +78,8 @@ class HighscoreStore:
         except OSError:
             pass
 
-    # --- Operations --------------------------------------------------------
-
     def qualifies(self, mode: str, score: int) -> bool:
+        """Return whether ``score`` enters the top 10 of ``mode``."""
         if score < 0:
             return False
         entries = self.by_mode.get(mode, [])
@@ -79,6 +88,7 @@ class HighscoreStore:
         return score > entries[-1][1]
 
     def add(self, mode: str, name: str, score: int) -> None:
+        """Insert a score, sort, truncate to the top 10, and save."""
         name = clean_name(name) or "PLAYER"
         score = max(0, int(score))
         entries = self.by_mode.setdefault(mode, [])
@@ -88,9 +98,11 @@ class HighscoreStore:
         self.save()
 
     def top(self, mode: str) -> List[Entry]:
+        """Return a copy of the top-10 list for ``mode``."""
         return list(self.by_mode.get(mode, []))
 
 
 def clean_name(name: str) -> str:
+    """Keep only alphanumerics and spaces, truncated to 10 characters."""
     kept = "".join(c for c in name if c.isalnum() or c == " ")
     return kept[:MAX_NAME_LEN].strip()

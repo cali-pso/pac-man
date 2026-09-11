@@ -1,3 +1,5 @@
+"""Shared constants, enumerations and small helpers used across the game."""
+
 from enum import Enum, IntEnum, auto
 from typing import Any
 
@@ -7,7 +9,7 @@ HEIGHT: int = 1500
 
 
 class GameState(Enum):
-    """GameStates"""
+    """The high-level states the application can be in."""
 
     INTRO = auto()
     MAIN_MENU = auto()
@@ -19,7 +21,7 @@ class GameState(Enum):
 
 
 class Color(IntEnum):
-    """Colors as 0xRRGGBB"""
+    """Palette colors, stored as 0xRRGGBB integers."""
 
     WHITE = 0xFFFFFF
     YELLOW = 0x00FFFF
@@ -29,6 +31,8 @@ class Color(IntEnum):
 
 
 class Key(IntEnum):
+    """X11 key codes used by the game input handling."""
+
     ESC = 65307
     ENTER = 65293
     SPACE = 32
@@ -44,13 +48,13 @@ class Key(IntEnum):
     Ib = 105
 
 
-def quit(mlx, mlx_ptr: Any) -> int:
-    """Demande a la boucle MLX de s'arreter proprement."""
+def quit(mlx: Any, mlx_ptr: Any) -> int:
+    """Ask the MLX loop to stop cleanly and return 0."""
     mlx.mlx_loop_exit(mlx_ptr)
     return 0
 
 
 def center_x_str(text: str) -> int:
-    """Calculates the X coordinate to horizontally center a string."""
-    char_w = 9  # Standard MLX font width
+    """Return the X coordinate that horizontally centers ``text``."""
+    char_w = 9  # Standard MLX font width.
     return (WIDTH - (len(text) * char_w)) // 2
