@@ -160,6 +160,8 @@ class MenuManager:
             "- Eat pacgums to win the level",
             "- Avoid ghosts unless powered up",
             "- ESC to pause",
+            "- To activate cheat mode, enter the Konami code",
+            "- Konami code: up-up-down-down-left-right-left-right-b-a",
         ]
         start_y = int(HEIGHT / 3)
         for i, line in enumerate(lines):

@@ -31,7 +31,7 @@
 		"width": 20,
 		"height": 15,
 		"seed": 42,
-		"max_level_time": 120,
+		"max_level_time": 180,
 		"points_per_ghost": 400,
 		"flashlight_radius": 3.5,
 		"flashlight_radius_min": 2.0,
