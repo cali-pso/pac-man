@@ -18,10 +18,10 @@ from src.utils import GameState, Key, center_x_str
 from src import mode_2players
 from src import mode_roguelite
 
-GHOST_INTERVAL: float = 0.38  # cadence des fantomes
-HOLD_GRACE: float = 0.15  # delai sans repetition avant de considerer relache
-STEP_INTERVAL: float = 0.21  # cadence min entre 2 cases (vitesse de Pac-Man)
-FRAME_INTERVAL: float = 0.016  # rendu continu (~60 fps) pour le lissage
+GHOST_INTERVAL: float = 0.38
+HOLD_GRACE: float = 0.15
+STEP_INTERVAL: float = 0.21
+FRAME_INTERVAL: float = 0.016
 PAUSE_OPTIONS = ["Continue", "Quit"]
 BACKSPACE: int = 65288
 
@@ -62,7 +62,6 @@ class App:
         self._current_mode: str = "Normal"
         self._level: int = 1
         self._total_levels: int = 1
-        # Deplacement Pac-Man
         self._move_dir: Tuple[int, int] = (0, 0)
         self._next_dir: Tuple[int, int] = (0, 0)
         self._active_player: int = 1
@@ -75,7 +74,6 @@ class App:
         self._base_ghost_speed: float = GHOST_INTERVAL
         self._base_pac_speed: float = STEP_INTERVAL
         self._last_frame: float = 0.0
-        # Roguelite
         self._run: Optional[mode_roguelite.RunState] = None
         self._roguelite: Optional[mode_roguelite.RogueliteEngine] = None
         self._choosing: bool = False
@@ -95,14 +93,12 @@ class App:
             Key.LEFT,
             Key.RIGHT,
             98,
-            Key.Ab,  # 'b' is 98, Key.Ab is 97
+            Key.Ab,
         ]
         # Initialize the sliding window
         self.input_buffer: "deque[int]" = deque(
             maxlen=len(self.konami_sequence)
         )
-
-    # --- Transitions -------------------------------------------------------
 
     def _reset_move(self) -> None:
         """Stop Pac-Man movement (reset direction and buffer)."""
@@ -162,7 +158,7 @@ class App:
             print("[start_game] ECHEC:", repr(exc))
             traceback.print_exc()
             self.session = None
-            self._go_to_menu()  # on ne reste pas bloque en PLAYING sans partie
+            self._go_to_menu()
 
     def _session_kwargs(self, ruleset: Any) -> dict:
         """Return GameSession kwargs for the current mode."""
@@ -201,8 +197,6 @@ class App:
         if self.session is not None:
             self.session.shadow = self.shadow
 
-    # --- Progression de niveau --------------------------------------------
-
     def _next_level(self) -> None:
         """Load the next level, keeping the score and lives."""
         assert self.session is not None
@@ -212,13 +206,13 @@ class App:
         self._pac_speed = ruleset.pac_speed
         self._base_ghost_speed = ruleset.ghost_speed
         self._base_pac_speed = ruleset.pac_speed
-        seed = random.randint(1, 2_000_000_000)  # niveaux 2+ : aleatoire
+        seed = random.randint(1, 2_000_000_000)
         maze = self.maze_loader.load((ruleset.width, ruleset.height), seed)
         kw = self._session_kwargs(ruleset)
-        kw["lives"] = self.session.lives  # on garde les vies
+        kw["lives"] = self.session.lives
         if self._run is not None:
-            kw["lives"] = self._run.lives  # roguelite : vies de la run
-        kw["start_score"] = self.session.score  # on garde le score
+            kw["lives"] = self._run.lives
+        kw["start_score"] = self.session.score
         cheat = self.session.cheat
         self.session = GameSession(maze, **kw)
         self.session.cheat = cheat
@@ -251,8 +245,6 @@ class App:
             self._on_finish()
         self._render_game()
 
-    # --- Fin de partie -----------------------------------------------------
-
     def _on_finish(self) -> None:
         """Handle game end: sound and high-score name entry."""
         if self._finish_handled or self.session is None:
@@ -265,8 +257,6 @@ class App:
             self._current_mode, self.session.score
         )
         self._name_buffer = ""
-
-    # --- Rendu -------------------------------------------------------------
 
     def _put_center(self, text: str, y: int, color: int) -> None:
         """Draw a horizontally centered string at height y."""
@@ -338,8 +328,6 @@ class App:
             self.session.won or self.session.game_over
         )
 
-    # --- Deplacement Pac-Man ----------------------------------------------
-
     def _init_random(self) -> None:
         """Initialise per-mode state (Random switch, Versus)."""
         self._active_player = 1
@@ -368,7 +356,7 @@ class App:
         if self._current_mode == "Random":
             return mode_2players.player_dir(keycode, self._active_player)
         if self._current_mode == "Versus":
-            return mode_2players.player_dir(keycode, 1)  # J1 = WASD
+            return mode_2players.player_dir(keycode, 1)
         return self._dir_for(keycode)
 
     @staticmethod
@@ -428,10 +416,8 @@ class App:
                     self._temp_msg_color = 0x00DD00 if is_bonus else 0xFF6600
                     self._temp_msg_until = time.time() + 2.5
             else:
-                self.audio.play_sound("move.wav")  # deplacement sans manger
+                self.audio.play_sound("move.wav")
             self._progress()
-
-    # --- Entrees -----------------------------------------------------------
 
     def _handle_name_key(self, keycode: int) -> None:
         """Handle a key while entering a high-score name."""
@@ -607,8 +593,6 @@ class App:
         self.session.won = True
         self._progress()
 
-    # --- Pause -------------------------------------------------------------
-
     def _enter_pause(self) -> None:
         """Pause the game and open the pause menu."""
         if self.session is None:
@@ -640,7 +624,6 @@ class App:
         self._put_center(
             "Up/Down + ENTER  -  ESC to resume", cy + 70, 0x888888
         )
-        # Roguelite : effets actifs de la run
         if self._current_mode == "Roguelite" and self._run is not None:
             self._put_center("--- Active effects ---", cy + 110, 0x00FFFF)
             for i, line in enumerate(self._run.summary()):
@@ -665,8 +648,6 @@ class App:
                 self._go_to_menu()
         elif keycode == Key.ESC:
             self._resume_game()
-
-    # --- Hooks -------------------------------------------------------------
 
     def _key_hook(self, keycode: int, param: Any = None) -> int:
         """MLX key hook: route a key press by game state."""
@@ -704,7 +685,7 @@ class App:
         pfx = pm.prev_x + (pm.x - pm.prev_x) * pac_prog
         pfy = pm.prev_y + (pm.y - pm.prev_y) * pac_prog
         if s.resolve_collisions(pfx, pfy, ghost_prog):
-            self._reset_move()  # Pac-Man est mort : on stoppe le mouvement
+            self._reset_move()
 
     def _loop_hook(self, *args: Any) -> int:
         """MLX loop hook: advance the game and render a frame."""
@@ -724,18 +705,15 @@ class App:
                 self._next_switch = now + random.uniform(
                     self._switch_min, self._switch_max)
                 self._reset_move()
-            # Pac-Man en maintien : avance a SA cadence tant que ca repete
             if now - self._last_step >= self._pac_speed:
                 self._last_step = now
                 self._step_pac()
             if self.shadow is not None:
                 self.shadow.update()
-            # Fin du mode POWERED
             if self.session is not None and not self._finished():
                 if self.session.update_power():
                     self.audio.stop_music()
                     self.audio.play_music("level.wav")
-            # Fantomes
             if (
                 self.session is not None
                 and not self._finished()
@@ -746,7 +724,6 @@ class App:
                 if not self.session.game_over:
                     self.session.update_ghosts()
                 self._progress()
-            # Collision visuelle + rendu continu (lissage)
             if now - self._last_frame >= FRAME_INTERVAL:
                 self._last_frame = now
                 self._resolve_visual_collisions(now)
