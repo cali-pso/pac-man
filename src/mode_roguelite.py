@@ -185,7 +185,7 @@ PAIRS: List[Dict] = [
     },
     {  # 9. Start-of-level freeze.
         "bonus": {
-            "label": "Ghosts frozen 3s",
+            "label": "Ghosts chained 3s",
             "field": "next_freeze_ghosts",
             "op": "set",
             "value": 3.0,
