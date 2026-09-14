@@ -218,6 +218,7 @@ class MenuManager:
             "- ESC to pause",
             "- To activate cheat mode, enter the Konami code",
             "- Konami code: up-up-down-down-left-right-left-right-b-a",
+            "- For 2 players mode: p1 use wasd keys, p2 use arrows"
         ]
         start_y = int(HEIGHT / 3)
         for i, line in enumerate(lines):
@@ -234,7 +235,7 @@ class MenuManager:
             self.mlx_ptr,
             self.win_ptr,
             center_x_str(footer),
-            start_y + 150,
+            start_y + 250,
             int(Color.CYAN),
             footer,
         )
