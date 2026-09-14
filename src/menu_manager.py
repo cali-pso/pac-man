@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 
-from mlx import Mlx
+from mlx import Mlx  # type: ignore[attr-defined]
 from src.utils import Color, Key, GameState, WIDTH, HEIGHT, quit, center_x_str
 from src.highscore import PAGES, HighscoreStore
 from src.mode_2players import SUBMODES

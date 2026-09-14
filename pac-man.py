@@ -2,7 +2,7 @@ import sys
 import subprocess
 
 
-def main():
+def main() -> None:
     if len(sys.argv) != 2:
         print("Usage: python3 pac-man.py config.json")
         sys.exit(1)

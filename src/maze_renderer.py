@@ -137,8 +137,8 @@ class MazeRenderer:
                 src_idx = src_y * sl_o + src_x * bpp
                 dst_idx = y * sl_n + x * bpp
 
-                new_bytes[dst_idx : dst_idx + bpp] = orig_bytes[
-                    src_idx : src_idx + bpp
+                new_bytes[dst_idx: dst_idx + bpp] = orig_bytes[
+                    src_idx: src_idx + bpp
                 ]
 
         # Assign the calculated bytes to the new image buffer
@@ -189,7 +189,7 @@ class MazeRenderer:
             if x1 <= x0:
                 return
             base = y * size_line + x0 * bpp_bytes
-            buf[base : base + (x1 - x0) * bpp_bytes] = wall_b * (x1 - x0)
+            buf[base: base + (x1 - x0) * bpp_bytes] = wall_b * (x1 - x0)
 
         def vline(x: int, y0: int, y1: int) -> None:
             """Draw a 1px vertical wall line."""
@@ -199,7 +199,7 @@ class MazeRenderer:
             y1 = min(ih, y1)
             for yy in range(y0, y1):
                 off = yy * size_line + x * bpp_bytes
-                buf[off : off + bpp_bytes] = wall_b
+                buf[off: off + bpp_bytes] = wall_b
 
         def hband(x0: int, x1: int, y: int) -> None:
             """Draw a thick horizontal wall band."""
@@ -304,7 +304,7 @@ class MazeRenderer:
             if x1 < x0:
                 continue
             base = yy * sl + x0 * bb
-            work[base : base + (x1 - x0 + 1) * bb] = color * (x1 - x0 + 1)
+            work[base: base + (x1 - x0 + 1) * bb] = color * (x1 - x0 + 1)
 
     def _fill_dot(
         self, work: bytearray, cx: int, cy: int, r: int, color: bytes
@@ -322,11 +322,10 @@ class MazeRenderer:
             if x1 < x0:
                 continue
             base = yy * sl + x0 * bb
-            work[base : base + (x1 - x0 + 1) * bb] = color * (x1 - x0 + 1)
+            work[base: base + (x1 - x0 + 1) * bb] = color * (x1 - x0 + 1)
 
     def _draw_walls(
-        self,
-        work: bytearray,
+        self, work: bytearray,
         visible: Optional[Callable[[int, int], bool]],
     ) -> None:
         """Draw the maze walls into work, clipped by visible."""
@@ -346,7 +345,7 @@ class MazeRenderer:
                 yy = y + t
                 if 0 <= yy < ih and x1 > x0:
                     base = yy * sl + x0 * bb
-                    work[base : base + (x1 - x0) * bb] = wb * (x1 - x0)
+                    work[base: base + (x1 - x0) * bb] = wb * (x1 - x0)
 
         def vband(x: int, y0: int, y1: int) -> None:
             """Draw a clipped vertical wall band."""
@@ -357,7 +356,7 @@ class MazeRenderer:
                 if 0 <= xx < iw:
                     for yy in range(y0, y1):
                         off = yy * sl + xx * bb
-                        work[off : off + bb] = wb
+                        work[off: off + bb] = wb
 
         for y in range(maze.rows):
             for x in range(maze.cols):
@@ -385,7 +384,7 @@ class MazeRenderer:
         half = cell // 2
         mox, moy = self.mox, self.moy
 
-        # Shadow mode: only reveal what's inside the light zone
+        # Mode shadow : ne revele que ce qui est dans la zone lumineuse.
         shadow = getattr(session, "shadow", None)
         px, py = session.pacman.x, session.pacman.y
 
@@ -394,13 +393,14 @@ class MazeRenderer:
         def visible(ex: int, ey: int) -> bool:
             """Return whether cell (ex, ey) is visible."""
             if mega_on:
-                return True  # mega activate : full visible
+                return True  # mega actif : toute la map eclairee
             return shadow is None or shadow.is_visible(ex, ey, px, py)
 
         if shadow is None:
+            # Mode normal : murs deja graves dans le template (rapide).
             work = bytearray(self._template)
         else:
-            # shadow Mode : walls drawn according to the illuminated area.
+            # Mode shadow : fond noir + murs dessines selon la zone lumineuse.
             work = bytearray(
                 self._bg_b * (self.size_line * self.ih // self.bpp_bytes)
             )
@@ -423,7 +423,7 @@ class MazeRenderer:
                     self._gum_b,
                 )
 
-        # Super-pacgums
+        # Super-pacgums (plus gros)
         super_r = max(2, cell // 3)
         for gx, gy in session.super_pacgums:
             if visible(gx, gy):
@@ -435,7 +435,7 @@ class MazeRenderer:
                     self._super_b,
                 )
 
-        # Mega pacgum: stay visible until eaten
+        # Mega pacgum (present tant que non mange)
         mpos = getattr(session, "mega_pos", None)
         if mpos is not None and visible(mpos[0], mpos[1]):
             self._fill_dot(
@@ -509,14 +509,14 @@ class MazeRenderer:
         )
 
         mode = getattr(session, "mode", "Normal")
-        # Normal Mode : minimal HUD
+        # Mode Normal : HUD minimal impose par le sujet.
         segs = [
             f"Level: {getattr(session, 'level', 1)}",
             f"Score: {session.score}",
             f"Lives: {session.lives}",
             f"Time: {session.time_left()}",
         ]
-        # other modes : more infos.
+        # Autres modes : infos supplementaires.
         if mode != "Normal":
             segs.append(f"Gums: {len(session.pacgums)}")
             segs.append(f"Super: {len(session.super_pacgums)}")
@@ -544,6 +544,7 @@ class MazeRenderer:
             segs.append("CHEATS: ON")
         if session.invicible:
             segs.append("GOD MODE: ON")
+        # Retour a la ligne quand la barre depasse la largeur de la fenetre.
         sep = "   "
         max_chars = max(16, (self.screen_w - 20) // 9)
         lines = []

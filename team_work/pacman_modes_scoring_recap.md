@@ -98,7 +98,7 @@ Chaque item porte un prédicat `est_éligible(état)`. **Le tirage ne pioche que
 | 6 | Durée super-pacgum ↑ | Durée super-pacgum ↓ |
 | 7 | Temps de départ ↑ | Temps de départ ↓ |
 | 8 | Révèle 1 option cachée du choix | Cache 1 option supplémentaire |
-| 9 | Fantômes bloqués X s (début niveau) | Pac-Man bloqué X s (début niveau) |
+| 9 | Fantômes enchainés X s (début niveau) | Pac-Man bloqué X s (début niveau) |
 | 10 | Score ×2 | Score ÷2 |
 
 *Ratio découvert/caché du choix (item #8) : départ 2/1, borné (min. 1 option affichée à définir).*

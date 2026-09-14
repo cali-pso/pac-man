@@ -3,7 +3,7 @@
 import time
 from typing import Any, List, Tuple
 
-from mlx import Mlx
+from mlx import Mlx  # type: ignore[attr-defined]
 from src.utils import HEIGHT, center_x_str
 
 # Colors in 0xRRGGBB format.

@@ -10,11 +10,12 @@ from typing import List, Optional, Set, Tuple
 
 from src.entities import Entity, EntityState, Ghost, PacMan
 from src.maze_loader import Maze
+from src.mode_shadow import ShadowMode
 
 ALL_WALLS = Maze.WALL_N | Maze.WALL_E | Maze.WALL_S | Maze.WALL_W  # 15
 GHOST_COLORS = [0xFF0000, 0xFFB8FF, 0x00FFFF, 0xFFB852]
-POWER_DURATION = 8.0  # Seconds ghosts stay edible after a super-pacgum.
-GHOST_RESPAWN_DELAY = 4.0  # Seconds before an eaten ghost returns.
+POWER_DURATION = 8.0        # Seconds ghosts stay edible after a super-pacgum.
+GHOST_RESPAWN_DELAY = 4.0   # Seconds before an eaten ghost returns.
 SHIELD_INVINCIBLE_DURATION = 2.5  # Invincibility after a shield absorbs a hit.
 
 
@@ -79,6 +80,10 @@ class GameSession:
         self.ghosts_frozen_until = 0.0
         self.pac_frozen_until = 0.0
         self.invincible_until = 0.0
+        # Set by app.py (level index, current player, shadow ctrl).
+        self.level = 1
+        self.active_player = 1
+        self.shadow: Optional[ShadowMode] = None
 
         sx, sy = self._find_spawn()
         self.pacman = PacMan(sx, sy)
@@ -298,7 +303,9 @@ class GameSession:
         """Lose a life, or consume a shield for temporary invincibility."""
         if self.shield_count > 0:
             self.shield_count -= 1
-            self.invincible_until = time.time() + SHIELD_INVINCIBLE_DURATION
+            self.invincible_until = (
+                time.time() + SHIELD_INVINCIBLE_DURATION
+            )
             return  # Invincible for a moment, no reset to spawn.
         self.lives -= 1
         if self.lives <= 0:
@@ -343,7 +350,7 @@ class GameSession:
             self._enter_power()
         if self.magnet_range > 0:
             px, py = self.pacman.x, self.pacman.y
-            for gx, gy in list(self.pacgums):
+            for (gx, gy) in list(self.pacgums):
                 if max(abs(gx - px), abs(gy - py)) <= self.magnet_range:
                     self.pacgums.discard((gx, gy))
                     self.score += int(self.points_per_pacgum * mult)
@@ -362,7 +369,9 @@ class GameSession:
                 g, "dead_until", 0.0
             ):
                 g.state = (
-                    EntityState.POWERED if self.powered else EntityState.NORMAL
+                    EntityState.POWERED
+                    if self.powered
+                    else EntityState.NORMAL
                 )
                 if getattr(g, "is_player", False):
                     self.ghost_dir = (0, 0)
@@ -371,7 +380,7 @@ class GameSession:
     def set_player_ghost(self, index: int) -> None:
         """Mark the ghost driven by player 2 (Versus); changes per level."""
         for gi, g in enumerate(self.ghosts):
-            g.is_player = gi == index
+            g.is_player = (gi == index)
         if 0 <= index < len(self.ghosts):
             self.player_ghost_index = index
         self.ghost_dir = (0, 0)
@@ -387,10 +396,14 @@ class GameSession:
             return
         cells, rows, cols = self.maze.cells, self.maze.rows, self.maze.cols
         nx, ny = self.ghost_next_dir
-        if (nx or ny) and Entity.can_step(cells, g.x, g.y, nx, ny, rows, cols):
+        if (nx or ny) and Entity.can_step(
+            cells, g.x, g.y, nx, ny, rows, cols
+        ):
             self.ghost_dir = self.ghost_next_dir
         dx, dy = self.ghost_dir
-        if (dx or dy) and Entity.can_step(cells, g.x, g.y, dx, dy, rows, cols):
+        if (dx or dy) and Entity.can_step(
+            cells, g.x, g.y, dx, dy, rows, cols
+        ):
             g.dir_x, g.dir_y = dx, dy
             g.x += dx
             g.y += dy
