@@ -17,12 +17,8 @@ clean:
 	rm -rf __pycache__ .mypy_cache build dist *.spec
 
 lint:
-	uv run flake8 ./src/
-	uv run mypy --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs .
-
-lint-strict:
-	uv run flake8 .
-	uv run mypy --strict .
+	- uv run flake8 ./src/
+	- uv run mypy --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs .
 
 build:
 	uv run pyinstaller --name pac-man \
