@@ -731,7 +731,7 @@ class App:
             if self.session is not None and not self._finished():
                 if self.session.update_power():
                     self.audio.stop_music()
-                    track = self.music_tracks.get(mode, "normal_mode.mp3")
+                    track = self.music_tracks.get(self.mode, "normal_mode.mp3")
                     self.audio.play_music(track)
             if (
                 self.session is not None
