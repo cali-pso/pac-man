@@ -243,7 +243,7 @@ of us and continuous testing after every feature. Task ownership, planning,
 progress tracking and acceptance tests are documented in the dedicated
 project-management directory.
 
-➡️ See [`project-management/`](./project-management/) for the planning, task
+➡️ See [team_work](./team_work/) for the planning, task
 distribution, risk analysis and acceptance-test notes.
 
 ### Authors
