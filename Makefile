@@ -16,6 +16,9 @@ debug:
 clean:
 	rm -rf __pycache__ .mypy_cache build dist *.spec
 
+fclean: clean
+	rm -rf .venv
+
 lint:
 	- uv run flake8 ./src/
 	- uv run mypy --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs .
@@ -30,3 +33,7 @@ build:
 		--hidden-import mazegenerator \
 		--hidden-import mlx \
 		src/__main__.py
+	mkdir dist/pac-man/src/
+	mkdir dist/pac-man/src/assets
+	cp -r src/assets dist/pac-man/src
+	cp config.json dist/pac-man/
