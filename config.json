@@ -1,9 +1,9 @@
-# This is a default config file for our game
-# Valeurs "moteur" ajoutees a chaque mode (modifiables ici) :
-#   ghost_speed          : secondes entre 2 pas des fantomes (plus petit = plus rapide)
-#   pac_speed            : secondes entre 2 pas de Pac-Man
-#   power_duration       : duree du super-pacgum (fantomes comestibles)
-#   ghost_respawn_delay  : delai avant qu'un fantome mange revienne
+# 	This is a default config file for our game
+# 	Motor values ​​added to each mode (editable here):
+#   ghost_speed          : seconds between ghost steps (lower value = faster)
+#   pac_speed            : seconds between two Pac-Man steps
+#   power_duration       : Duration of the Super Pac-Dot (edible ghosts)
+#   ghost_respawn_delay  : time before a ghost returns to eat
 {
 	"global": {
 		"highscore_filename": "data/highscores.json"
